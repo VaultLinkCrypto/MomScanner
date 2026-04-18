@@ -1,5 +1,5 @@
 class MomentumEngine:
-    def __init__(self, alpha=0.3): # Increased from 0.1 to 0.3 for visible movement
+    def __init__(self, alpha=0.3):
         self.alpha = alpha
         self.scores = {}
         self.active_tickers = set()
@@ -7,23 +7,21 @@ class MomentumEngine:
         self.EXIT_BAR = 40
 
     def calculate_score(self, ticker, l2_data):
-        # 1. Sum up volumes from mock_data
+        # Sum up volumes from the mock data
         bid_vol = sum([b['size'] for b in l2_data.get('bids', [])])
         ask_vol = sum([a['size'] for a in l2_data.get('asks', [])])
         
-        # 2. Calculate Raw Imbalance
         raw_score = 50.0
         if (bid_vol + ask_vol) > 0:
             ratio = (bid_vol - ask_vol) / (bid_vol + ask_vol)
             raw_score = ((ratio + 1) / 2) * 100
         
-        # 3. EMA Smoothing
-        # Every second, 30% of the new raw data is added to the score
+        # EMA Smoothing
         prev_score = self.scores.get(ticker, 50.0)
         smoothed_score = (raw_score * self.alpha) + (prev_score * (1 - self.alpha))
         self.scores[ticker] = smoothed_score
         
-        # 4. Persistence Logic (SOFI style)
+        # Persistence Logic
         if smoothed_score >= self.ENTRY_BAR:
             self.active_tickers.add(ticker)
         elif smoothed_score < self.EXIT_BAR:
