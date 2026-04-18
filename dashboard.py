@@ -5,55 +5,65 @@ from scanner_logic import run_funnel
 from engine import MomentumEngine
 
 st.set_page_config(page_title="VaultLink Scanner", layout="wide")
-st.title("🚀 MomScanner: Persistent Trend Monitor")
+st.title("🚀 MomScanner: Fixed-Row Monitor")
 
-# --- 1. PERSISTENT MEMORY ---
+# 1. Initialize Memory
 if 'engine' not in st.session_state:
-    st.session_state.engine = MomentumEngine(alpha=0.1) # Alpha 0.1 for even smoother SOFI moves
+    st.session_state.engine = MomentumEngine()
 
-# --- 2. SIDEBAR ---
+# 2. Sidebar Controls
 with st.sidebar:
     st.header("Settings")
-    ticker_input = st.text_area("Watchlist (Comma Separated)", "TSLA,NVDA,AAPL,AMD,SOFI,SPY")
+    ticker_input = st.text_area("Watchlist", "TSLA,NVDA,AAPL,AMD,SOFI,SPY,QQQ")
     watchlist = [s.strip().upper() for s in ticker_input.split(",") if s.strip()]
     
     st.divider()
-    # The Toggle Switch that replaces the button
-    run_live = st.toggle("🛰️ Start Live Monitoring", value=False)
+    # The Slider no longer HIDES anything. It only acts as a 'Limit' for your eyes.
+    max_spread_limit = st.slider("Max Option Spread Goal ($)", 0.01, 0.20, 0.05)
     
-    if st.button("Clear Engine Memory"):
+    run_live = st.toggle("🛰️ Start Live Stream", value=False)
+    
+    if st.button("Reset Scanner Memory"):
         st.session_state.engine.active_tickers.clear()
-        st.session_state.engine.scores.clear()
         st.rerun()
 
-# --- 3. LIVE DISPLAY ---
-table_placeholder = st.empty()
+# 3. Main Display Area
+placeholder = st.empty()
 
 if run_live:
-    # Anchor the rows so they never move
-    master_df = pd.DataFrame({'Ticker': watchlist})
+    # Anchor the Rows: Create a static dataframe based on your list
+    anchor_df = pd.DataFrame({'Ticker': watchlist})
 
     while True:
-        # Fetch data for the FULL watchlist
-        new_data_df = run_funnel(watchlist, st.session_state.engine)
+        # Get new data for ALL 7 tickers
+        fresh_data = run_funnel(watchlist, st.session_state.engine)
         
-        # Merge onto Master to keep rows STATIC
-        display_df = pd.merge(master_df, new_data_df, on='Ticker', how='left')
+        # Merge onto Anchor: This forces the order to stay the same
+        # and prevents any ticker from 'vanishing'
+        final_df = pd.merge(anchor_df, fresh_data, on='Ticker', how='left')
 
-        with table_placeholder.container():
-            st.subheader(f"Monitoring {len(display_df)} Tickers (Static View)")
+        with placeholder.container():
+            st.subheader(f"Stable View: Tracking {len(final_df)} Tickers")
             
-            # Use styling to highlight Active trades
+            # Use Style to highlight, NOT filter.
+            def style_rows(row):
+                styles = [''] * len(row)
+                # Highlight Active Momentum
+                if row['Status'] == '🔥 ACTIVE':
+                    styles[row.index.get_loc('Status')] = 'background-color: #1b5e20; color: white'
+                # Highlight Bad Spreads (Red if above your slider limit)
+                if row['Spread'] > max_spread_limit:
+                    styles[row.index.get_loc('Spread')] = 'background-color: #b71c1c; color: white'
+                return styles
+
             st.dataframe(
-                display_df.style.map(
-                    lambda x: 'background-color: #1b5e20; color: white; font-weight: bold' if x == '🔥 ACTIVE' else '',
-                    subset=['Status']
-                ),
+                final_df.style.apply(style_rows, axis=1),
                 use_container_width=True,
                 hide_index=True
             )
-            st.caption(f"Last Update: {time.strftime('%H:%M:%S')} | Rows are anchored. No vanishing tickers.")
-        
-        time.sleep(1) # Refresh rate
+            
+            st.caption(f"Update: {time.strftime('%H:%M:%S')} | No tickers will vanish. Rows are static.")
+
+        time.sleep(1)
 else:
-    st.info("Toggle 'Start Live Monitoring' to lock your watchlist into the stable display.")
+    st.info("Toggle 'Start Live Stream' to lock the rows and begin monitoring.")
