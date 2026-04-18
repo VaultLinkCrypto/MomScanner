@@ -2,18 +2,12 @@ import streamlit as st
 import pandas as pd
 import time
 from scanner_logic import run_funnel
-from engine import MomentumEngine
 
 # 1. Page Configuration
 st.set_page_config(page_title="VaultLink Scanner", layout="wide")
-st.title("🚀 MomScanner: Live Lotto Sniper")
+st.title("🚀 MomScanner: Stable Monitor")
 
-# 2. Initialize the Engine in 'Memory' (Session State)
-# This prevents the score from resetting every second.
-if 'engine' not in st.session_state:
-    st.session_state.engine = MomentumEngine(alpha=0.2)
-
-# 3. Sidebar Controls
+# 2. Sidebar Controls
 with st.sidebar:
     st.header("Scanner Controls")
     default_tickers = "TSLA,NVDA,AAPL,AMD,MSFT,META,AMZN,GOOGL,SPY,QQQ"
@@ -21,49 +15,50 @@ with st.sidebar:
     watchlist = [s.strip().upper() for s in ticker_input.split(",")]
     
     st.divider()
-    max_spread = st.slider("Max Option Spread ($)", 0.01, 0.10, 0.05)
-    # We use this for 'Highlighting' rather than 'Deleting'
-    alert_threshold = st.number_input("Alert Threshold", 0, 100, 70)
+    # We remove the 'Max Spread' and 'Min Score' from the DATA logic
+    # and move them to VISUAL logic (highlighting)
+    alert_threshold = st.number_input("Alert Threshold (Score)", 0, 100, 70)
     
     run_live = st.toggle("🛰️ Start Live Monitoring", value=False)
 
-# 4. The Live Monitoring Loop
-# This placeholder allows us to update the table without refreshing the whole page
+# 3. The Stable UI Container
 placeholder = st.empty()
 
 if run_live:
+    # Initialize a Master Dataframe to keep rows static
+    # We fetch the list once to "Anchor" the rows
+    master_df = pd.DataFrame({'Ticker': watchlist})
+    
     while True:
         try:
-            # Fetch data using the existing funnel
-            df = run_funnel(watchlist)
+            # Fetch the new numbers
+            new_data_df = run_funnel(watchlist)
             
-            # Sort by Score so the 'hot' ones are always at the top
-            df = df.sort_values(by='Score', ascending=False)
-            
-            # Add a 'Status' column for visual feedback
-            df['Signal'] = df['Score'].apply(lambda x: '🔥 BUY' if x >= alert_threshold else '⏳ WAIT')
+            # STABILITY STEP: We 'Merge' the new numbers into our Master List
+            # This ensures no ticker vanishes and the order stays exactly as you typed it
+            display_df = pd.merge(master_df, new_data_df, on='Ticker', how='left')
 
             with placeholder.container():
-                st.subheader(f"Monitoring {len(df)} Tickers")
+                st.subheader(f"Monitoring {len(display_df)} Tickers")
                 
-                # We use a color-coded or styled dataframe
-                # This keeps the tickers visible even if they drop to a 40 score
+                # USER EXPERIENCE IMPROVEMENT:
+                # We use 'style' to highlight winners instead of hiding losers.
+                # Sorting is now handled MANUALLY by you clicking the column header.
                 st.dataframe(
-                    df.style.map(
-                        lambda x: 'background-color: #2e7d32' if x == '🔥 BUY' else '', 
-                        subset=['Signal']
+                    display_df.style.map(
+                        lambda x: 'background-color: #1b5e20; color: white' if isinstance(x, float) and x >= alert_threshold else '', 
+                        subset=['Score']
                     ),
                     use_container_width=True,
                     hide_index=True
                 )
                 
-                st.caption(f"Last Update: {time.strftime('%H:%M:%S')} | Alpha: 0.2")
+                st.caption(f"Last Update: {time.strftime('%H:%M:%S')} | Rows are Static. Click headers to sort manually.")
 
-            # Frequency: Update every 1 second
             time.sleep(1)
             
         except Exception as e:
             st.error(f"Loop Error: {e}")
             break
 else:
-    st.info("Toggle 'Start Live Monitoring' in the sidebar to begin.")
+    st.info("Toggle 'Start Live Monitoring' to lock the rows and begin tracking.")
