@@ -18,7 +18,7 @@ with st.sidebar:
     watchlist = [s.strip().upper() for s in ticker_input.split(",") if s.strip()]
     
     st.divider()
-    # THIS IS THE TOGGLE. If you see a button, the code didn't update.
+    # Ensure this is a TOGGLE, not a button
     run_live = st.toggle("🛰️ Start Live Monitoring", value=False)
     
     if st.button("Reset Memory"):
@@ -40,17 +40,19 @@ if run_live:
         final_df = pd.merge(anchor_df, fresh_data, on='Ticker', how='left')
 
         with placeholder.container():
-            st.subheader(f"Status: LIVE | Tracking {len(final_df)} Tickers")
+            # VISUAL PULSE: This character will flip every second to prove the loop is alive
+            pulse = "🟢" if int(time.time()) % 2 == 0 else "⚪"
+            st.subheader(f"{pulse} Status: LIVE | Tracking {len(final_df)} Tickers")
             
-            # Show the table
+            # UPDATED SYNTAX FOR 2026: width='stretch'
             st.dataframe(
                 final_df.sort_values(by='Score', ascending=False),
-                use_container_width=True,
+                width='stretch', 
                 hide_index=True
             )
             st.caption(f"Last Terminal Tick: {time.strftime('%H:%M:%S')}")
 
-        # Force a 1-second wait before the next loop
+        # Wait exactly 1 second
         time.sleep(1)
 else:
     st.info("Flip the 'Start Live Monitoring' switch in the sidebar to begin.")
