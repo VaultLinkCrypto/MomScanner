@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MomScanner · Momentum Scoring Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #0a0e12;
+    --bg-panel: #121820;
+    --bg-panel-2: #1a2230;
+    --bg-row: #0f1419;
+    --bg-row-hover: #1a2230;
+    --border: #253040;
+    --border-soft: #1c2633;
+    --text: #d9e2ec;
+    --text-dim: #8895a7;
+    --text-faint: #4a5a6e;
+    --accent: #ffaa00;
+    --accent-soft: #ffaa0022;
+    --up: #00d68a;
+    --up-soft: #00d68a22;
+    --down: #ff4d5e;
+    --down-soft: #ff4d5e22;
+    --neutral: #6c7a8e;
+    --blue: #4aa3ff;
+    --blue-soft: #4aa3ff22;
+    --score-high: #00ff9d;
+    --score-low: #ff3860;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-base);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.45;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at top left, rgba(255,170,0,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(74,163,255,0.03), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .app { position: relative; z-index: 1; padding: 16px; max-width: 1800px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 14px 20px;
+    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-mark {
+    width: 10px; height: 22px;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--up) 100%);
+    border-radius: 1px;
+    box-shadow: 0 0 16px var(--accent-soft);
+  }
+  .logo-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-left: 2px;
+  }
+  .status-pills {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    background: var(--bg-row);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .pill strong { color: var(--text); font-weight: 500; }
+  .pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--neutral);
+  }
+  .pill .dot.live { background: var(--up); box-shadow: 0 0 8px var(--up); animation: pulse 2s infinite; }
+  .pill .dot.err { background: var(--down); }
+  .pill .dot.warn { background: var(--accent); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Settings panel */
+  .settings {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .settings-head {
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg-panel-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-head:hover { background: #1f2937; }
+  .settings-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .settings-title svg { width: 14px; height: 14px; }
+  .caret { font-size: 10px; color: var(--text-dim); transition: transform 0.2s; }
+  .settings.collapsed .caret { transform: rotate(-90deg); }
+  .settings.collapsed .settings-body { display: none; }
+  .settings-body {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .setting-group {
+    background: var(--bg-row);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+    padding: 12px;
+  }
+  .setting-group h4 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 500;
+  }
+  .field input, .field select {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field input[type=range] { padding: 0; accent-color: var(--accent); }
+  .range-row { display: flex; align-items: center; gap: 10px; }
+  .range-row input[type=range] { flex: 1; }
+  .range-val {
+    font-size: 12px;
+    color: var(--accent);
+    min-width: 42px;
+    text-align: right;
+    font-weight: 500;
+  }
+  .btn {
+    background: var(--bg-panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: #223043; border-color: var(--accent); color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .btn.primary:hover { background: #ffbb33; color: #000; }
+  .btn.danger:hover { border-color: var(--down); color: var(--down); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Input bar */
+  .input-bar {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .input-bar textarea {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    border-radius: 2px;
+    outline: none;
+    resize: vertical;
+    min-height: 38px;
+    max-height: 120px;
+  }
+  .input-bar textarea:focus { border-color: var(--accent); }
+  .input-bar textarea::placeholder { color: var(--text-faint); }
+
+  /* Main table */
+  .table-wrap {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .table-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg-panel-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .table-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .table-title .count {
+    color: var(--accent);
+    margin-left: 6px;
+    font-weight: 700;
+  }
+  .table-scroll { overflow-x: auto; max-height: 60vh; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+  }
+  thead th {
+    position: sticky; top: 0;
+    background: var(--bg-panel-2);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    z-index: 2;
+  }
+  thead th:first-child, thead th.left { text-align: left; }
+  tbody tr {
+    border-bottom: 1px solid var(--border-soft);
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: var(--bg-row-hover); }
+  tbody tr.score-high { background: linear-gradient(90deg, rgba(0,214,138,0.08), transparent 60%); }
+  tbody tr.score-low { background: linear-gradient(90deg, rgba(255,77,94,0.08), transparent 60%); }
+  tbody td {
+    padding: 9px 8px;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  tbody td:first-child, tbody td.left { text-align: left; }
+  .ticker {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+  .up-txt { color: var(--up); }
+  .down-txt { color: var(--down); }
+  .dim-txt { color: var(--text-dim); }
+  .faint-txt { color: var(--text-faint); }
+
+  /* Score cell */
+  .score-cell {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-weight: 600;
+    font-size: 12px;
+    min-width: 42px;
+    justify-content: center;
+  }
+  .score-bar-wrap {
+    position: relative;
+    width: 60px;
+    height: 18px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-soft);
+    border-radius: 2px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .score-bar-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s;
+  }
+  .score-bar-text {
+    position: absolute;
+    inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--text);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    font-variant-numeric: tabular-nums;
+  }
+  .arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .arrow.up { background: var(--up-soft); color: var(--up); }
+  .arrow.down { background: var(--down-soft); color: var(--down); }
+  .arrow.flat { background: rgba(108,122,142,0.15); color: var(--neutral); }
+  .delta { font-weight: 600; font-size: 11.5px; }
+  .delta.up { color: var(--up); }
+  .delta.down { color: var(--down); }
+  .delta.flat { color: var(--neutral); }
+  .grade {
+    display: inline-block;
+    width: 20px; height: 20px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 2px;
+    font-weight: 700;
+    font-size: 10.5px;
+  }
+  .grade.A { background: var(--up-soft); color: var(--up); border: 1px solid var(--up); }
+  .grade.B { background: var(--blue-soft); color: var(--blue); border: 1px solid var(--blue); }
+  .grade.C { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+  .grade.D { background: var(--down-soft); color: var(--down); border: 1px solid var(--down); }
+  .grade.unk { background: transparent; color: var(--text-faint); border: 1px solid var(--border); }
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 12px;
+  }
+  .empty-state .big {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* History panel */
+  .history {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .hist-head {
+    padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg-panel-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .hist-head:hover { background: #1f2937; }
+  .hist-body { padding: 12px 14px; }
+  .history.collapsed .hist-body { display: none; }
+  .history.collapsed .caret { transform: rotate(-90deg); }
+  .hist-stats {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .stat-tile {
+    background: var(--bg-row);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+    padding: 8px 12px;
+    min-width: 100px;
+  }
+  .stat-tile .label {
+    font-size: 9px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 2px;
+  }
+  .stat-tile .val {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+  }
+  .stat-tile .val.accent { color: var(--accent); }
+
+  /* Toast */
+  .toast-container {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 1000;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--text);
+    box-shadow: var(--shadow);
+    animation: slideIn 0.3s ease;
+    pointer-events: auto;
+    max-width: 340px;
+  }
+  .toast.err { border-left-color: var(--down); }
+  .toast.ok { border-left-color: var(--up); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Weight sliders */
+  .weight-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 36px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .weight-row label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .weight-sum {
+    text-align: right;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .weight-sum.bad { color: var(--down); }
+
+  /* Info tooltip */
+  details.info {
+    background: var(--bg-row);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  details.info summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+    list-style: none;
+  }
+  details.info summary::before { content: '▸ '; }
+  details[open].info summary::before { content: '▾ '; }
+  details.info p { margin-top: 8px; line-height: 1.6; }
+  details.info code { background: var(--bg-base); padding: 1px 5px; border-radius: 2px; color: var(--accent); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-base); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  @media (max-width: 900px) {
+    .input-bar { grid-template-columns: 1fr; }
+    .header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <span>MomScanner</span>
+      <span class="logo-sub">MOMENTUM TERMINAL</span>
+    </div>
+    <div class="status-pills">
+      <div class="pill"><span class="dot" id="feedDot"></span>Feed: <strong id="feedLabel">—</strong></div>
+      <div class="pill">Active: <strong id="activeCount">0</strong></div>
+      <div class="pill">Refresh: <strong id="refreshLabel">—</strong>s</div>
+      <div class="pill">Next: <strong id="countdownLabel">—</strong>s</div>
+      <div class="pill">Last: <strong id="lastRefreshLabel">—</strong></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="settings" id="settings">
+    <div class="settings-head" onclick="toggleSettings()">
+      <div class="settings-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Configuration
+      </div>
+      <span class="caret">▾</span>
+    </div>
+    <div class="settings-body">
+
+      <!-- Data Source -->
+      <div class="setting-group">
+        <h4>Data Source</h4>
+        <div class="field">
+          <label>Feed</label>
+          <select id="feedSelect">
+            <option value="tradier">Tradier (L1)</option>
+            <option value="schwab">Schwab</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tradier API Key</label>
+          <input id="tradierKey" type="password" placeholder="Paste your Tradier key..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Tradier Environment</label>
+          <select id="tradierEnv">
+            <option value="https://api.tradier.com/v1">Production</option>
+            <option value="https://sandbox.tradier.com/v1">Sandbox</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Schwab App Key</label>
+          <input id="schwabKey" type="password" placeholder="Schwab App Key..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Schwab App Secret</label>
+          <input id="schwabSecret" type="password" placeholder="Schwab App Secret..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Schwab Callback URL</label>
+          <input id="schwabCallback" type="text" placeholder="https://yourname.github.io/MomScanner/" />
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="saveKeys()">Save Keys</button>
+          <button class="btn" onclick="connectSchwab()">Connect Schwab OAuth</button>
+          <button class="btn" onclick="testFeed()">Test Feed</button>
+        </div>
+      </div>
+
+      <!-- Scoring -->
+      <div class="setting-group">
+        <h4>Score Weights (sum = 100)</h4>
+        <div class="weight-row">
+          <label>Volume Pressure</label>
+          <input type="range" min="0" max="60" id="wVP" value="30" />
+          <span class="range-val" id="wVPval">30</span>
+        </div>
+        <div class="weight-row">
+          <label>Relative Volume</label>
+          <input type="range" min="0" max="60" id="wRV" value="20" />
+          <span class="range-val" id="wRVval">20</span>
+        </div>
+        <div class="weight-row">
+          <label>Price vs EMA</label>
+          <input type="range" min="0" max="60" id="wPE" value="20" />
+          <span class="range-val" id="wPEval">20</span>
+        </div>
+        <div class="weight-row">
+          <label>Volatility Exp.</label>
+          <input type="range" min="0" max="60" id="wVE" value="15" />
+          <span class="range-val" id="wVEval">15</span>
+        </div>
+        <div class="weight-row">
+          <label>Options Activity</label>
+          <input type="range" min="0" max="60" id="wOA" value="15" />
+          <span class="range-val" id="wOAval">15</span>
+        </div>
+        <div class="weight-sum" id="weightSum">Total: 100</div>
+      </div>
+
+      <!-- Behavior -->
+      <div class="setting-group">
+        <h4>Behavior</h4>
+        <div class="field">
+          <label>Smoothing Lag (seconds)</label>
+          <div class="range-row">
+            <input type="range" min="10" max="180" id="smoothLag" value="60" />
+            <span class="range-val" id="smoothLagVal">60s</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Green Threshold (score ≥)</label>
+          <div class="range-row">
+            <input type="range" min="50" max="95" id="highThresh" value="75" />
+            <span class="range-val" id="highThreshVal">75</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Red Threshold (score ≤)</label>
+          <div class="range-row">
+            <input type="range" min="5" max="50" id="lowThresh" value="25" />
+            <span class="range-val" id="lowThreshVal">25</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Min Refresh Seconds</label>
+          <div class="range-row">
+            <input type="range" min="3" max="30" id="minRefresh" value="5" />
+            <span class="range-val" id="minRefreshVal">5s</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+          <button class="btn" onclick="resetSettings()">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <details class="info">
+    <summary>How this tool works · How the score is computed</summary>
+    <p><strong>Workflow:</strong> Paste tickers from your thinkorswim scan below. The tool polls your chosen data feed (Tradier or Schwab) on an adaptive interval. Each ticker gets a <strong>raw score</strong> computed from 5 weighted components. That raw score is smoothed with an EMA so it drifts instead of jumping. Direction arrow and Cumulative Score Change update in real time (no smoothing).</p>
+    <p><strong>The 5 score components:</strong></p>
+    <p>• <code>Volume Pressure</code> — proxy for buy vs sell volume using uptick/downtick proxy (last trade vs bid/ask midpoint).<br>
+    • <code>Relative Volume</code> — today's cumulative volume vs 20-day average, time-of-day adjusted.<br>
+    • <code>Price vs EMA</code> — distance from 9-period EMA, normalized by ATR(14) so a $15 stock and a $500 stock are comparable.<br>
+    • <code>Volatility Expansion</code> — current session range vs ATR(14), catches breakouts from consolidation.<br>
+    • <code>Options Activity</code> — proxy based on today's options volume vs open interest where available.</p>
+    <p>Raw score ranges 0–100; <strong>50 = balanced</strong>. Extreme readings (&gt;75 or &lt;25) indicate strong directional probability. The arrow and Cumulative columns update <em>every tick</em>; the main Score column is smoothed over your configured lag window.</p>
+  </details>
+
+  <!-- INPUT -->
+  <div class="input-bar">
+    <textarea id="tickerInput" placeholder="Paste tickers here (comma, space, or newline separated). Example: AAPL, MSFT NVDA TSLA&#10;SPY QQQ AMD..."></textarea>
+    <button class="btn primary" onclick="addTickers()">Add to Scan</button>
+    <button class="btn" onclick="pauseResume()"><span id="pauseLabel">Pause</span></button>
+    <button class="btn danger" onclick="clearActive()">Clear Active</button>
+  </div>
+
+  <!-- MAIN TABLE -->
+  <div class="table-wrap">
+    <div class="table-head">
+      <div class="table-title">Active Scan<span class="count" id="tblCount">0</span></div>
+      <div class="btn-row">
+        <button class="btn" onclick="exportActiveCSV()">Export Active CSV</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th class="left">Ticker</th>
+            <th>Last</th>
+            <th>%Chg</th>
+            <th>Pre-Mkt</th>
+            <th>Aft-Hrs</th>
+            <th>Rel Vol</th>
+            <th>Opt Liq</th>
+            <th>Score</th>
+            <th>Dir</th>
+            <th>ΔScore</th>
+            <th>Min Seen</th>
+            <th>First Seen</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="12"><div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history" id="history">
+    <div class="hist-head" onclick="toggleHistory()">
+      <div class="settings-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+        History Archive
+      </div>
+      <span class="caret">▾</span>
+    </div>
+    <div class="hist-body">
+      <div class="hist-stats" id="histStats"></div>
+      <div class="btn-row" style="margin-bottom: 12px;">
+        <button class="btn primary" onclick="exportHistoryCSV()">Export Full History CSV</button>
+        <button class="btn" onclick="loadHistoryFromStorage()">Refresh</button>
+        <button class="btn danger" onclick="clearHistory()">Clear All History</button>
+      </div>
+      <div class="table-scroll" style="max-height: 30vh;">
+        <table>
+          <thead>
+            <tr>
+              <th class="left">Ticker</th>
+              <th>First Seen</th>
+              <th>Last Seen</th>
+              <th>Obs Count</th>
+              <th>Score Peak</th>
+              <th>Score Low</th>
+              <th>Score Last</th>
+              <th>Price Last</th>
+            </tr>
+          </thead>
+          <tbody id="histBody">
+            <tr><td colspan="8"><div class="empty-state"><div class="big">Empty</div>No historical observations yet</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* =====================================================================
+   MomScanner - Momentum Scoring Terminal
+   Single-file companion tool for thinkorswim filter results
+   ===================================================================== */
+
+// ---------- CONSTANTS ----------
+const LS_KEYS = {
+  tradier: 'ms_tradier_key',
+  tradierEnv: 'ms_tradier_env',
+  schwabKey: 'ms_schwab_key',
+  schwabSecret: 'ms_schwab_secret',
+  schwabCallback: 'ms_schwab_callback',
+  schwabToken: 'ms_schwab_token',
+  feed: 'ms_feed',
+  weights: 'ms_weights',
+  behavior: 'ms_behavior',
+  history: 'ms_history_v1',
+  activeTickers: 'ms_active_tickers'
+};
+
+// ---------- STATE ----------
+const state = {
+  active: new Map(),       // ticker -> tickerData
+  history: {},             // ticker -> { firstSeen, lastSeen, obsCount, peak, low, last, priceLast }
+  paused: false,
+  countdown: 0,
+  refreshIntervalSec: 5,
+  schwabAccessToken: null,
+  lastFeedStatus: 'idle',
+  priceHistory: new Map(), // ticker -> [{t, price}]   rolling 120s for direction
+  volHistory: new Map(),   // ticker -> [{t, volume}]
+};
+
+// ---------- PERSISTENCE HELPERS ----------
+function lsGet(k, def=null) {
+  try { const v = localStorage.getItem(k); return v===null ? def : JSON.parse(v); }
+  catch(e) { return def; }
+}
+function lsSet(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { toast('Storage error: '+e.message, 'err'); }
+}
+
+// ---------- UI HELPERS ----------
+function qs(id) { return document.getElementById(id); }
+function toast(msg, kind='info', ms=3200) {
+  const c = qs('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (kind==='err' ? 'err' : kind==='ok' ? 'ok' : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+function fmtNum(n, dec=2) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '—';
+  return n.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtPct(n, dec=2) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '—';
+  const sign = n >= 0 ? '+' : '';
+  return sign + n.toFixed(dec) + '%';
+}
+function fmtTime(ms) {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  return d.toLocaleTimeString('en-US', { hour12: false });
+}
+function fmtDateTime(ms) {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  return d.toLocaleString('en-US', { hour12: false });
+}
+
+// ---------- SETTINGS PANEL ----------
+function toggleSettings() { qs('settings').classList.toggle('collapsed'); }
+function toggleHistory() { qs('history').classList.toggle('collapsed'); }
+
+function saveKeys() {
+  lsSet(LS_KEYS.tradier, qs('tradierKey').value.trim());
+  lsSet(LS_KEYS.tradierEnv, qs('tradierEnv').value);
+  lsSet(LS_KEYS.schwabKey, qs('schwabKey').value.trim());
+  lsSet(LS_KEYS.schwabSecret, qs('schwabSecret').value.trim());
+  lsSet(LS_KEYS.schwabCallback, qs('schwabCallback').value.trim());
+  lsSet(LS_KEYS.feed, qs('feedSelect').value);
+  toast('API keys saved to browser storage', 'ok');
+  updateFeedPill();
+}
+function loadKeys() {
+  qs('tradierKey').value = lsGet(LS_KEYS.tradier, '') || '';
+  qs('tradierEnv').value = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1') || 'https://api.tradier.com/v1';
+  qs('schwabKey').value = lsGet(LS_KEYS.schwabKey, '') || '';
+  qs('schwabSecret').value = lsGet(LS_KEYS.schwabSecret, '') || '';
+  qs('schwabCallback').value = lsGet(LS_KEYS.schwabCallback, '') || (window.location.origin + window.location.pathname);
+  qs('feedSelect').value = lsGet(LS_KEYS.feed, 'tradier') || 'tradier';
+  const tok = lsGet(LS_KEYS.schwabToken, null);
+  if (tok && tok.access_token) state.schwabAccessToken = tok.access_token;
+}
+
+function saveSettings() {
+  const weights = {
+    VP: +qs('wVP').value, RV: +qs('wRV').value, PE: +qs('wPE').value,
+    VE: +qs('wVE').value, OA: +qs('wOA').value
+  };
+  const behavior = {
+    smoothLag: +qs('smoothLag').value,
+    highThresh: +qs('highThresh').value,
+    lowThresh: +qs('lowThresh').value,
+    minRefresh: +qs('minRefresh').value
+  };
+  lsSet(LS_KEYS.weights, weights);
+  lsSet(LS_KEYS.behavior, behavior);
+  toast('Settings saved', 'ok');
+}
+function loadSettings() {
+  const w = lsGet(LS_KEYS.weights, { VP:30, RV:20, PE:20, VE:15, OA:15 });
+  const b = lsGet(LS_KEYS.behavior, { smoothLag:60, highThresh:75, lowThresh:25, minRefresh:5 });
+  qs('wVP').value = w.VP; qs('wRV').value = w.RV; qs('wPE').value = w.PE;
+  qs('wVE').value = w.VE; qs('wOA').value = w.OA;
+  qs('smoothLag').value = b.smoothLag; qs('highThresh').value = b.highThresh;
+  qs('lowThresh').value = b.lowThresh; qs('minRefresh').value = b.minRefresh;
+  refreshWeightLabels(); refreshBehaviorLabels();
+}
+function resetSettings() {
+  qs('wVP').value = 30; qs('wRV').value = 20; qs('wPE').value = 20;
+  qs('wVE').value = 15; qs('wOA').value = 15;
+  qs('smoothLag').value = 60; qs('highThresh').value = 75;
+  qs('lowThresh').value = 25; qs('minRefresh').value = 5;
+  refreshWeightLabels(); refreshBehaviorLabels();
+  saveSettings();
+}
+function refreshWeightLabels() {
+  ['VP','RV','PE','VE','OA'].forEach(k => qs('w'+k+'val').textContent = qs('w'+k).value);
+  const sum = ['VP','RV','PE','VE','OA'].reduce((a,k)=>a+ +qs('w'+k).value, 0);
+  const el = qs('weightSum');
+  el.textContent = 'Total: ' + sum + (sum===100 ? ' ✓' : ' (will be normalized)');
+  el.classList.toggle('bad', sum===0);
+}
+function refreshBehaviorLabels() {
+  qs('smoothLagVal').textContent = qs('smoothLag').value + 's';
+  qs('highThreshVal').textContent = qs('highThresh').value;
+  qs('lowThreshVal').textContent = qs('lowThresh').value;
+  qs('minRefreshVal').textContent = qs('minRefresh').value + 's';
+}
+['VP','RV','PE','VE','OA'].forEach(k => {
+  // attach after DOM ready below
+});
+
+function getWeights() {
+  const w = lsGet(LS_KEYS.weights, { VP:30, RV:20, PE:20, VE:15, OA:15 });
+  const sum = w.VP + w.RV + w.PE + w.VE + w.OA;
+  if (sum === 0) return { VP:0.2, RV:0.2, PE:0.2, VE:0.2, OA:0.2 };
+  return { VP: w.VP/sum, RV: w.RV/sum, PE: w.PE/sum, VE: w.VE/sum, OA: w.OA/sum };
+}
+function getBehavior() {
+  return lsGet(LS_KEYS.behavior, { smoothLag:60, highThresh:75, lowThresh:25, minRefresh:5 });
+}
+
+// ---------- FEED STATUS ----------
+function updateFeedPill() {
+  const feed = qs('feedSelect').value;
+  const dot = qs('feedDot');
+  const label = qs('feedLabel');
+  dot.classList.remove('live','err','warn');
+  if (state.lastFeedStatus === 'ok') dot.classList.add('live');
+  else if (state.lastFeedStatus === 'err') dot.classList.add('err');
+  else dot.classList.add('warn');
+  label.textContent = feed === 'tradier' ? 'Tradier L1' : (state.schwabAccessToken ? 'Schwab' : 'Schwab (not connected)');
+}
+
+// ---------- TICKER MANAGEMENT ----------
+function addTickers() {
+  const raw = qs('tickerInput').value;
+  const parts = raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));
+  if (parts.length === 0) { toast('No valid tickers found', 'err'); return; }
+  let added = 0;
+  const now = Date.now();
+  parts.forEach(t => {
+    if (!state.active.has(t)) {
+      state.active.set(t, {
+        ticker: t,
+        firstSeen: now,
+        lastSeen: null,
+        last: null, prevClose: null, pctChg: null,
+        pmPrice: null, ahPrice: null,
+        volume: null, avgVol20: null, relVol: null,
+        bid: null, ask: null, atr: null, ema9: null,
+        optOI: null, optSpread: null, optVol: null,
+        rawScore: 50,
+        smoothScore: 50,
+        firstSeenScore: null,
+        direction30s: 0,
+        arrow: 'flat',
+        components: { VP:50, RV:50, PE:50, VE:50, OA:50 }
+      });
+      state.priceHistory.set(t, []);
+      state.volHistory.set(t, []);
+      added++;
+    }
+  });
+  qs('tickerInput').value = '';
+  saveActiveTickers();
+  render();
+  toast(`Added ${added} new ticker${added!==1?'s':''} (${parts.length-added} duplicates skipped)`, 'ok');
+}
+
+function clearActive() {
+  if (!confirm('Clear active scan? History archive will NOT be affected.')) return;
+  state.active.clear();
+  state.priceHistory.clear();
+  state.volHistory.clear();
+  saveActiveTickers();
+  render();
+  toast('Active scan cleared', 'ok');
+}
+
+function saveActiveTickers() {
+  lsSet(LS_KEYS.activeTickers, Array.from(state.active.keys()));
+}
+function restoreActiveTickers() {
+  const arr = lsGet(LS_KEYS.activeTickers, []) || [];
+  const now = Date.now();
+  arr.forEach(t => {
+    if (!state.active.has(t)) {
+      state.active.set(t, {
+        ticker: t, firstSeen: now, lastSeen: null,
+        last:null, prevClose:null, pctChg:null, pmPrice:null, ahPrice:null,
+        volume:null, avgVol20:null, relVol:null, bid:null, ask:null, atr:null, ema9:null,
+        optOI:null, optSpread:null, optVol:null,
+        rawScore:50, smoothScore:50, firstSeenScore:null,
+        direction30s:0, arrow:'flat',
+        components: { VP:50, RV:50, PE:50, VE:50, OA:50 }
+      });
+      state.priceHistory.set(t, []);
+      state.volHistory.set(t, []);
+    }
+  });
+}
+
+// ---------- SCORING ----------
+function clamp(x, lo=0, hi=100) { return Math.max(lo, Math.min(hi, x)); }
+
+function computeRawScore(d) {
+  // VP: Volume Pressure (uptick/downtick proxy using last vs mid)
+  let vpScore = 50;
+  if (d.bid && d.ask && d.last) {
+    const mid = (d.bid + d.ask) / 2;
+    const spread = d.ask - d.bid;
+    if (spread > 0) {
+      const pos = (d.last - d.bid) / spread; // 0 at bid, 1 at ask
+      vpScore = 50 + (pos - 0.5) * 100;      // 0 at bid, 100 at ask
+    }
+    // blend with recent direction tick trend
+    vpScore = 0.6 * vpScore + 0.4 * (50 + d.direction30s * 5);
+    vpScore = clamp(vpScore);
+  }
+  // RV: Relative Volume (log-scaled around 1.0x)
+  let rvScore = 50;
+  if (d.relVol !== null && d.relVol !== undefined && d.relVol > 0) {
+    // relVol 1.0 -> 50; 3.0 -> ~85; 0.3 -> ~15
+    rvScore = clamp(50 + 25 * Math.log2(d.relVol));
+  }
+  // PE: Price vs EMA, normalized by ATR
+  let peScore = 50;
+  if (d.last && d.ema9 && d.atr && d.atr > 0) {
+    const dev = (d.last - d.ema9) / d.atr; // in ATR units
+    peScore = clamp(50 + dev * 20);        // ±2.5 ATR -> extremes
+  } else if (d.pctChg !== null) {
+    peScore = clamp(50 + d.pctChg * 5);
+  }
+  // VE: Volatility Expansion (current range vs ATR)
+  let veScore = 50;
+  if (d.atr && d.atr > 0 && d.last && d.pctChg !== null) {
+    const todayRange = Math.abs(d.pctChg / 100) * d.last;
+    const ratio = todayRange / d.atr;
+    veScore = clamp(50 + (ratio - 0.5) * 60);
+  }
+  // OA: Options Activity
+  let oaScore = 50;
+  if (d.optVol && d.optOI && d.optOI > 0) {
+    const ratio = d.optVol / d.optOI;
+    oaScore = clamp(50 + 30 * Math.log2(Math.max(0.1, ratio * 4)));
+  }
+  d.components = { VP:vpScore, RV:rvScore, PE:peScore, VE:veScore, OA:oaScore };
+  const w = getWeights();
+  const raw = vpScore*w.VP + rvScore*w.RV + peScore*w.PE + veScore*w.VE + oaScore*w.OA;
+  return clamp(raw);
+}
+
+function applySmoothing(d, rawScore) {
+  const b = getBehavior();
+  // EMA-style smoothing: alpha chosen so that the score reaches ~63% of a step change after smoothLag seconds.
+  // Approximate: alpha = 1 - exp(-dt / tau), where tau = smoothLag, dt = refreshInterval
+  const tau = Math.max(5, b.smoothLag);
+  const dt = state.refreshIntervalSec;
+  const alpha = 1 - Math.exp(-dt / tau);
+  d.smoothScore = d.smoothScore + alpha * (rawScore - d.smoothScore);
+  d.rawScore = rawScore;
+  if (d.firstSeenScore === null && d.lastSeen !== null) {
+    d.firstSeenScore = d.smoothScore;
+  }
+}
+
+function updateDirection(d, ticker) {
+  const hist = state.priceHistory.get(ticker) || [];
+  const now = Date.now();
+  if (d.last !== null && d.last !== undefined) {
+    hist.push({ t: now, price: d.last });
+  }
+  // keep only last 30s
+  const cutoff = now - 30_000;
+  while (hist.length && hist[0].t < cutoff) hist.shift();
+  state.priceHistory.set(ticker, hist);
+  if (hist.length < 2) { d.direction30s = 0; d.arrow = 'flat'; return; }
+  // sum of signed price changes
+  let sum = 0, count = 0;
+  for (let i=1; i<hist.length; i++) {
+    const dp = hist[i].price - hist[i-1].price;
+    sum += Math.sign(dp);
+    count++;
+  }
+  const avg = count ? sum / count : 0;
+  d.direction30s = avg;
+  if (avg > 0.15) d.arrow = 'up';
+  else if (avg < -0.15) d.arrow = 'down';
+  else d.arrow = 'flat';
+}
+
+// ---------- DATA FETCH ----------
+async function fetchTradierQuotes(tickers) {
+  const key = lsGet(LS_KEYS.tradier, '');
+  const base = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1');
+  if (!key) throw new Error('Tradier API key not set');
+  const url = `${base}/markets/quotes?symbols=${encodeURIComponent(tickers.join(','))}&greeks=false`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
+  });
+  if (!res.ok) throw new Error('Tradier HTTP ' + res.status);
+  const json = await res.json();
+  const quotes = json?.quotes?.quote;
+  if (!quotes) return [];
+  const arr = Array.isArray(quotes) ? quotes : [quotes];
+  return arr.map(q => ({
+    symbol: q.symbol,
+    last: q.last ?? q.close,
+    bid: q.bid,
+    ask: q.ask,
+    volume: q.volume,
+    avgVol: q.average_volume,
+    prevClose: q.prevclose,
+    pctChg: q.change_percentage,
+    high: q.high,
+    low: q.low,
+    open: q.open
+  }));
+}
+
+async function fetchSchwabQuotes(tickers) {
+  if (!state.schwabAccessToken) throw new Error('Schwab not connected (OAuth needed)');
+  const url = `https://api.schwabapi.com/marketdata/v1/quotes?symbols=${encodeURIComponent(tickers.join(','))}&fields=quote,reference`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + state.schwabAccessToken, 'Accept': 'application/json' }
+  });
+  if (res.status === 401) {
+    state.schwabAccessToken = null;
+    throw new Error('Schwab token expired - reconnect');
+  }
+  if (!res.ok) throw new Error('Schwab HTTP ' + res.status);
+  const json = await res.json();
+  const results = [];
+  for (const sym in json) {
+    const q = json[sym].quote || {};
+    results.push({
+      symbol: sym,
+      last: q.lastPrice,
+      bid: q.bidPrice,
+      ask: q.askPrice,
+      volume: q.totalVolume,
+      avgVol: null,
+      prevClose: q.closePrice,
+      pctChg: q.netPercentChange,
+      high: q.highPrice,
+      low: q.lowPrice,
+      open: q.openPrice
+    });
+  }
+  return results;
+}
+
+async function testFeed() {
+  try {
+    const feed = qs('feedSelect').value;
+    toast('Testing feed...', 'info');
+    const probe = ['SPY','QQQ'];
+    const data = feed === 'tradier' ? await fetchTradierQuotes(probe) : await fetchSchwabQuotes(probe);
+    if (data && data.length) {
+      toast(`Feed OK · got ${data.length} quote${data.length!==1?'s':''} · SPY=${data[0]?.last ?? '—'}`, 'ok');
+      state.lastFeedStatus = 'ok';
+    } else {
+      toast('Feed returned no data', 'err');
+      state.lastFeedStatus = 'err';
+    }
+  } catch(e) {
+    toast('Feed test failed: ' + e.message, 'err');
+    state.lastFeedStatus = 'err';
+  }
+  updateFeedPill();
+}
+
+// ---------- SCHWAB OAUTH ----------
+function connectSchwab() {
+  const key = qs('schwabKey').value.trim();
+  const cb = qs('schwabCallback').value.trim();
+  if (!key || !cb) { toast('Set Schwab App Key and Callback URL first', 'err'); return; }
+  const authUrl = `https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=${encodeURIComponent(key)}&redirect_uri=${encodeURIComponent(cb)}`;
+  window.location.href = authUrl;
+}
+
+async function handleSchwabCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return;
+  const key = lsGet(LS_KEYS.schwabKey, '');
+  const secret = lsGet(LS_KEYS.schwabSecret, '');
+  const cb = lsGet(LS_KEYS.schwabCallback, '');
+  if (!key || !secret) { toast('Missing Schwab credentials', 'err'); return; }
+  const creds = btoa(key + ':' + secret);
+  try {
+    const res = await fetch('https://api.schwabapi.com/v1/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + creds,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`
+    });
+    if (!res.ok) throw new Error('Token exchange HTTP ' + res.status);
+    const tok = await res.json();
+    lsSet(LS_KEYS.schwabToken, tok);
+    state.schwabAccessToken = tok.access_token;
+    // clean URL
+    window.history.replaceState({}, document.title, cb);
+    toast('Schwab connected', 'ok');
+    updateFeedPill();
+  } catch(e) {
+    toast('Schwab OAuth failed: ' + e.message, 'err');
+  }
+}
+
+// ---------- MAIN POLL LOOP ----------
+async function pollOnce() {
+  if (state.paused) return;
+  const tickers = Array.from(state.active.keys());
+  if (tickers.length === 0) return;
+  const feed = qs('feedSelect').value;
+  try {
+    // chunk to avoid URL length issues
+    const chunks = [];
+    for (let i=0; i<tickers.length; i+=40) chunks.push(tickers.slice(i, i+40));
+    let all = [];
+    for (const c of chunks) {
+      const d = feed === 'tradier' ? await fetchTradierQuotes(c) : await fetchSchwabQuotes(c);
+      all = all.concat(d);
+    }
+    const now = Date.now();
+    all.forEach(q => {
+      const t = q.symbol;
+      const d = state.active.get(t);
+      if (!d) return;
+      d.last = q.last;
+      d.bid = q.bid;
+      d.ask = q.ask;
+      d.volume = q.volume;
+      d.avgVol20 = q.avgVol;
+      d.prevClose = q.prevClose;
+      d.pctChg = (typeof q.pctChg === 'number') ? q.pctChg : (q.pctChg != null ? parseFloat(q.pctChg) : null);
+      d.lastSeen = now;
+      if (d.avgVol20 && d.volume) d.relVol = d.volume / d.avgVol20;
+      // Approximate ATR and EMA9 from available data (not perfect without history API, but gives reasonable shape)
+      // If high/low available, use daily range as a rough ATR proxy
+      if (q.high && q.low) d.atr = Math.max(d.atr || 0, q.high - q.low);
+      if (d.ema9 === null || d.ema9 === undefined) d.ema9 = d.last;
+      else d.ema9 = d.ema9 * 0.8 + d.last * 0.2; // rolling approximation
+      // direction + score
+      updateDirection(d, t);
+      const raw = computeRawScore(d);
+      // first smoothing initialization
+      if (d.smoothScore === 50 && d.firstSeenScore === null) d.smoothScore = raw;
+      applySmoothing(d, raw);
+      if (d.firstSeenScore === null) d.firstSeenScore = d.smoothScore;
+      // record to history
+      recordHistory(d);
+    });
+    state.lastFeedStatus = 'ok';
+    qs('lastRefreshLabel').textContent = fmtTime(now);
+  } catch(e) {
+    state.lastFeedStatus = 'err';
+    toast('Feed error: ' + e.message, 'err', 4000);
+  }
+  updateFeedPill();
+  render();
+}
+
+// ---------- HISTORY ----------
+function recordHistory(d) {
+  const h = state.history[d.ticker] || {
+    ticker: d.ticker,
+    firstSeen: d.firstSeen,
+    lastSeen: d.lastSeen,
+    obsCount: 0,
+    peak: d.smoothScore,
+    low: d.smoothScore,
+    last: d.smoothScore,
+    priceLast: d.last
+  };
+  h.lastSeen = d.lastSeen;
+  h.obsCount++;
+  h.peak = Math.max(h.peak, d.smoothScore);
+  h.low = Math.min(h.low, d.smoothScore);
+  h.last = d.smoothScore;
+  h.priceLast = d.last;
+  state.history[d.ticker] = h;
+  // persist periodically
+  if (h.obsCount % 5 === 0) lsSet(LS_KEYS.history, state.history);
+}
+function loadHistoryFromStorage() {
+  state.history = lsGet(LS_KEYS.history, {}) || {};
+  renderHistory();
+  toast('History loaded', 'ok');
+}
+function clearHistory() {
+  if (!confirm('Clear ENTIRE history archive? This cannot be undone.')) return;
+  state.history = {};
+  lsSet(LS_KEYS.history, {});
+  renderHistory();
+  toast('History cleared', 'ok');
+}
+
+// ---------- CSV EXPORT ----------
+function csvEscape(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+function downloadCSV(name, rows) {
+  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function exportActiveCSV() {
+  const rows = [['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','FirstSeen','LastSeen','MinutesSeen']];
+  const now = Date.now();
+  state.active.forEach(d => {
+    rows.push([
+      d.ticker, d.last, d.pctChg, d.volume, d.relVol, d.bid, d.ask,
+      d.rawScore?.toFixed(2), d.smoothScore?.toFixed(2), d.firstSeenScore?.toFixed(2),
+      (d.rawScore - (d.firstSeenScore ?? d.rawScore)).toFixed(2),
+      d.arrow, new Date(d.firstSeen).toISOString(),
+      d.lastSeen ? new Date(d.lastSeen).toISOString() : '',
+      ((now - d.firstSeen)/60000).toFixed(1)
+    ]);
+  });
+  downloadCSV('momscanner_active_' + Date.now() + '.csv', rows);
+}
+function exportHistoryCSV() {
+  const rows = [['Ticker','FirstSeen','LastSeen','ObsCount','PeakScore','LowScore','LastScore','PriceLast']];
+  Object.values(state.history).forEach(h => {
+    rows.push([
+      h.ticker,
+      new Date(h.firstSeen).toISOString(),
+      h.lastSeen ? new Date(h.lastSeen).toISOString() : '',
+      h.obsCount,
+      h.peak?.toFixed(2),
+      h.low?.toFixed(2),
+      h.last?.toFixed(2),
+      h.priceLast
+    ]);
+  });
+  downloadCSV('momscanner_history_' + Date.now() + '.csv', rows);
+}
+
+// ---------- RENDER ----------
+function render() {
+  renderActive();
+  renderHistory();
+}
+
+function optionsLiquidityGrade(d) {
+  // Without options API calls, grade by proxy: bid/ask tightness + volume
+  if (!d.bid || !d.ask || !d.last) return 'unk';
+  const spreadPct = (d.ask - d.bid) / d.last;
+  const v = d.volume || 0;
+  if (spreadPct < 0.001 && v > 5_000_000) return 'A';
+  if (spreadPct < 0.003 && v > 1_000_000) return 'B';
+  if (spreadPct < 0.008 && v > 250_000) return 'C';
+  return 'D';
+}
+
+function scoreColor(score) {
+  if (score >= 75) return 'var(--up)';
+  if (score >= 60) return '#7fd99a';
+  if (score >= 40) return 'var(--accent)';
+  if (score >= 25) return '#ff9e6e';
+  return 'var(--down)';
+}
+
+function renderActive() {
+  const b = getBehavior();
+  const tbody = qs('tbody');
+  const arr = Array.from(state.active.values());
+  qs('tblCount').textContent = arr.length;
+  qs('activeCount').textContent = arr.length;
+  if (arr.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12"><div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div></td></tr>';
+    return;
+  }
+  // sort: smoothScore desc, then options liquidity grade (A < B < C < D so invert)
+  const gradeRank = { A:0, B:1, C:2, D:3, unk:4 };
+  arr.sort((a,b) => {
+    const ds = (b.smoothScore ?? 0) - (a.smoothScore ?? 0);
+    if (Math.abs(ds) > 0.01) return ds;
+    return (gradeRank[optionsLiquidityGrade(a)] ?? 9) - (gradeRank[optionsLiquidityGrade(b)] ?? 9);
+  });
+  const now = Date.now();
+  const rows = arr.map(d => {
+    const grade = optionsLiquidityGrade(d);
+    const score = d.smoothScore ?? 50;
+    const scoreInt = Math.round(score);
+    const delta = (d.firstSeenScore !== null && d.firstSeenScore !== undefined)
+      ? d.rawScore - d.firstSeenScore : 0;
+    const deltaClass = delta > 0.5 ? 'up' : delta < -0.5 ? 'down' : 'flat';
+    const minSeen = ((now - d.firstSeen) / 60000).toFixed(1);
+    const rowCls = score >= b.highThresh ? 'score-high' : score <= b.lowThresh ? 'score-low' : '';
+    const pctClass = (d.pctChg ?? 0) > 0 ? 'up-txt' : (d.pctChg ?? 0) < 0 ? 'down-txt' : 'dim-txt';
+    return `<tr class="${rowCls}">
+      <td class="left"><span class="ticker">${d.ticker}</span></td>
+      <td>${fmtNum(d.last)}</td>
+      <td class="${pctClass}">${fmtPct(d.pctChg)}</td>
+      <td class="dim-txt">${fmtNum(d.pmPrice)}</td>
+      <td class="dim-txt">${fmtNum(d.ahPrice)}</td>
+      <td>${d.relVol !== null && d.relVol !== undefined ? fmtNum(d.relVol, 2)+'x' : '—'}</td>
+      <td><span class="grade ${grade}">${grade==='unk'?'?':grade}</span></td>
+      <td>
+        <div class="score-bar-wrap" title="Smooth: ${score.toFixed(2)} | Raw: ${d.rawScore.toFixed(2)}">
+          <div class="score-bar-fill" style="width:${score}%;background:${scoreColor(score)}"></div>
+          <div class="score-bar-text">${scoreInt}</div>
+        </div>
+      </td>
+      <td><span class="arrow ${d.arrow}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></td>
+      <td class="delta ${deltaClass}">${delta>=0?'+':''}${delta.toFixed(1)}</td>
+      <td class="dim-txt">${minSeen}</td>
+      <td class="faint-txt">${fmtTime(d.firstSeen)}</td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = rows;
+}
+
+function renderHistory() {
+  const entries = Object.values(state.history);
+  const tbody = qs('histBody');
+  const stats = qs('histStats');
+  const totalTickers = entries.length;
+  const totalObs = entries.reduce((a,h)=>a+h.obsCount, 0);
+  const maxPeak = entries.reduce((a,h)=>Math.max(a, h.peak || 0), 0);
+  const hi75 = entries.filter(h => (h.peak||0) >= 75).length;
+  stats.innerHTML = `
+    <div class="stat-tile"><div class="label">Tickers Tracked</div><div class="val accent">${totalTickers}</div></div>
+    <div class="stat-tile"><div class="label">Total Observations</div><div class="val">${totalObs.toLocaleString()}</div></div>
+    <div class="stat-tile"><div class="label">Peak Score Seen</div><div class="val">${maxPeak.toFixed(1)}</div></div>
+    <div class="stat-tile"><div class="label">Hit ≥ 75</div><div class="val accent">${hi75}</div></div>
+  `;
+  if (entries.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="big">Empty</div>No historical observations yet</div></td></tr>';
+    return;
+  }
+  entries.sort((a,b) => (b.lastSeen||0) - (a.lastSeen||0));
+  tbody.innerHTML = entries.slice(0, 500).map(h => `
+    <tr>
+      <td class="left"><span class="ticker">${h.ticker}</span></td>
+      <td class="dim-txt">${fmtDateTime(h.firstSeen)}</td>
+      <td class="dim-txt">${fmtDateTime(h.lastSeen)}</td>
+      <td>${h.obsCount}</td>
+      <td class="up-txt">${h.peak?.toFixed(1) ?? '—'}</td>
+      <td class="down-txt">${h.low?.toFixed(1) ?? '—'}</td>
+      <td>${h.last?.toFixed(1) ?? '—'}</td>
+      <td>${fmtNum(h.priceLast)}</td>
+    </tr>
+  `).join('');
+}
+
+// ---------- ADAPTIVE REFRESH ----------
+function computeRefreshInterval() {
+  const b = getBehavior();
+  const n = state.active.size;
+  return Math.max(b.minRefresh, Math.ceil(n / 20));
+}
+
+// ---------- PAUSE ----------
+function pauseResume() {
+  state.paused = !state.paused;
+  qs('pauseLabel').textContent = state.paused ? 'Resume' : 'Pause';
+  toast(state.paused ? 'Scan paused' : 'Scan resumed', 'ok');
+}
+
+// ---------- CLOCK LOOP ----------
+let lastPollAt = 0;
+function tickClock() {
+  const now = Date.now();
+  state.refreshIntervalSec = computeRefreshInterval();
+  qs('refreshLabel').textContent = state.refreshIntervalSec;
+  const elapsed = Math.floor((now - lastPollAt) / 1000);
+  const remaining = Math.max(0, state.refreshIntervalSec - elapsed);
+  qs('countdownLabel').textContent = remaining;
+  // re-render direction/delta every second even without new data
+  if (state.active.size > 0) renderActive();
+  if (!state.paused && elapsed >= state.refreshIntervalSec && state.active.size > 0) {
+    lastPollAt = now;
+    pollOnce();
+  }
+}
+
+// ---------- INIT ----------
+function init() {
+  loadKeys();
+  loadSettings();
+  state.history = lsGet(LS_KEYS.history, {}) || {};
+  restoreActiveTickers();
+
+  // attach listeners for slider labels
+  ['VP','RV','PE','VE','OA'].forEach(k => {
+    qs('w'+k).addEventListener('input', refreshWeightLabels);
+  });
+  ['smoothLag','highThresh','lowThresh','minRefresh'].forEach(id => {
+    qs(id).addEventListener('input', refreshBehaviorLabels);
+  });
+  qs('feedSelect').addEventListener('change', () => { lsSet(LS_KEYS.feed, qs('feedSelect').value); updateFeedPill(); });
+
+  // handle Schwab OAuth return
+  if (window.location.search.includes('code=')) handleSchwabCallback();
+
+  updateFeedPill();
+  render();
+  setInterval(tickClock, 1000);
+  lastPollAt = Date.now() - 3000; // trigger near-immediate first poll when tickers exist
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
