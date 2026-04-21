@@ -1,13 +1,23 @@
 # MomScanner
 
-Real-time momentum scoring companion for thinkorswim web scan results. Pulls quotes from Tradier or Schwab, computes a smoothed 0–100 score per ticker, and persists every observation to browser local storage for post-session study.
+Real-time momentum scoring companion for thinkorswim web scan results. Pulls quotes from Tradier or Schwab, computes a smoothed 0–100 score per ticker, filters by live options liquidity, and persists every observation to browser local storage for post-session study.
 
 ## Quick overview
 
 - **thinkorswim web** runs the filter. Produces the candidate ticker list.
-- **MomScanner** (this tool) pulls live quotes for those tickers, computes the score, and tracks them.
-- **Tradier L1** is the default feed. **Schwab API** is used once your developer app is approved.
+- **MomScanner** (this tool) pulls live quotes + live options chain data for those tickers, computes the score, auto-hides illiquid options, and tracks them.
+- **Tradier L2** is the default feed and enables the options chain filtering.
 - Every ticker that ever passes through the tool is saved to local storage and exportable as CSV.
+
+## What's new in this version
+
+- **Penny Pilot whitelist** — roughly 400 tickers known to have tight penny-wide options spreads. Paste anything you want, non-whitelisted tickers get silently rejected at input. Default ON.
+- **Live options spread % column** — pulls the ATM call and ATM put at the nearest expiration within your DTE limit, computes real bid/ask spread as a percentage of mid, shows whichever side (call or put) is tighter.
+- **Live options OI column** — open interest on the ATM strike.
+- **Auto-hide filter** — tickers where spread > your max % OR OI < your minimum are automatically hidden from the active table (still logged to history). Hidden count shown in the table header.
+- **Upgraded OA scoring component** — Options Activity now uses real spread and OI data when available, not the previous proxy.
+- **Smart tiebreaker** — same score → tighter options spread wins → better stock liquidity breaks further ties.
+
 
 ---
 
@@ -165,19 +175,35 @@ This scan runs inside trade.thinkorswim.com and produces the candidate ticker li
 
 Add each filter one by one using the **Add Filter** button. Use the native filter controls shown in your screenshot where possible — they're faster than custom thinkScript and they do work in the web version.
 
+**Tight filters (recommended, produces ~25-40 symbols):**
+
 | Filter | Operator | Value |
 |---|---|---|
-| Last | is greater than or equal to | 5 |
+| Last | is greater than or equal to | 20 |
+| Last | is less than or equal to | 500 |
+| Volume | is greater than or equal to | 5,000,000 |
+| Market Cap | is greater than or equal to | 10,000,000,000 |
+| Percent Change | absolute value is greater than or equal to | 1.5 |
+| Option Volume Index | is greater than or equal to | 1.5 |
+
+**Loose filters (if you want more candidates, ~60-100 symbols):**
+
+| Filter | Operator | Value |
+|---|---|---|
+| Last | is greater than or equal to | 10 |
 | Last | is less than or equal to | 500 |
 | Volume | is greater than or equal to | 1,000,000 |
 | Percent Change | absolute value is greater than or equal to | 1.5 |
 | Option Volume Index | is greater than or equal to | 1 |
 
 The key parameters in plain words:
-- **Price $5–$500** — your range.
-- **Volume ≥ 1M** — liquidity on the underlying.
+- **Price $20–$500** — keeps you above the zone where $0.05 option spreads destroy OTM trades.
+- **Volume ≥ 5M** — strong proxy for tight options spreads at the underlying level.
+- **Market Cap ≥ $10B** — large caps almost universally have penny or nickel-wide ATM options.
 - **|% Change| ≥ 1.5%** — already moving, about to hit your 2% target.
-- **Option Volume Index ≥ 1** — has active options trading today.
+- **Option Volume Index ≥ 1.5** — options volume running 50% above recent average.
+
+**Important:** The MomScanner Penny Pilot filter is your second line of defense. Even the loose thinkorswim filter + Penny Pilot whitelist will produce cleaner results than the tight thinkorswim filter alone. Let the tool do the cutting.
 
 ### 3.3 — Optional thinkScript filter for momentum pre-qualifier
 
@@ -224,7 +250,7 @@ Each scan pass computes a **raw score** from five weighted components:
 | Relative Volume | 20% | Today's cumulative volume vs 20-day average |
 | Price vs EMA | 20% | Distance from 9-EMA, ATR-normalized |
 | Volatility Expansion | 15% | Today's range vs ATR(14) |
-| Options Activity | 15% | Options volume vs open interest (when available) |
+| Options Activity | 15% | Live ATM options spread tightness + open interest |
 
 **Scoring scale:**
 - **50** = perfect balance, no directional signal
@@ -233,6 +259,45 @@ Each scan pass computes a **raw score** from five weighted components:
 - Direction arrow indicates which way (up = calls, down = puts)
 
 **Smoothing:** the displayed score is an EMA of the raw score with a time constant equal to your configured "Smoothing Lag" (default 60 seconds). This prevents jitter. The **ΔScore** column shows the raw score minus the first-seen score and updates with zero lag, so you can see momentum shifts before the smoothed score catches up.
+
+---
+
+## Part 4.5 — Options Liquidity Filter (the heart of the v2 upgrade)
+
+Located in **Configuration → Options Liquidity Filter**. This panel is what makes MomScanner actually produce tradable candidates instead of just scored noise.
+
+### Penny Pilot Only toggle (default: ON)
+
+When enabled, any ticker you paste into the input that is not on the ~400-ticker CBOE Penny Pilot whitelist is silently rejected at the door. These are the stocks known to trade with $0.01 or $0.05 option increments on weekly/daily expirations — meaning tight spreads by definition.
+
+A toast will tell you how many were accepted vs rejected when you paste, so you know what got cut.
+
+**Turn this OFF if you want to monitor a specific ticker that isn't on the list.** It happens — new IPOs or growing names take time to get added. The rest of the filter layers will still protect you from untradable options.
+
+### Max Options Spread % (default: 15%)
+
+For each active ticker, MomScanner pulls the ATM call and ATM put at the nearest expiration within your DTE limit. It computes `(ask - bid) / mid × 100` and uses whichever side is tighter. If that number exceeds your threshold, the ticker is hidden from the active table (but still logged).
+
+**Reading the Spread% column:**
+- **Green (≤5%)** — excellent. You can buy at the ask and only lose a small fraction on entry.
+- **Yellow (5-15%)** — tradable with caution. Need strong conviction on direction.
+- **Red (>15%)** — do not trade. Auto-hidden by default.
+
+### Min ATM Open Interest (default: 500)
+
+Open interest is "how many contracts exist at this strike right now." Low OI means even if the spread looks okay, you may not find a counterparty when you try to sell. 500 is a floor; 2000+ is safer.
+
+### Max DTE for Spread Check (default: 14 days)
+
+The tool picks the nearest expiration within this window for the spread check. Your strategy runs 0-14 DTE, so 14 is the correct default. If you want to look at only same-week expirations, set it to 7 or less.
+
+### Options Check Interval (default: 60s)
+
+Options spreads change more slowly than stock prices. 60 seconds is plenty — but you can tighten it to 30s if you want faster updates, or loosen to 120-300s if you have many tickers and want to save API calls.
+
+### What the hidden count means
+
+In the Active Scan table header, you'll see something like **"Active Scan: 12 (+18 hidden)"**. The 12 are your tradable candidates right now. The 18 are tickers with known bad options liquidity (too-wide spread, too-low OI, or both). Hidden tickers still update their scores in the background and still show up in History — the filter is presentation-only, not computational.
 
 ---
 
