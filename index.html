@@ -632,6 +632,49 @@
         <div class="weight-sum" id="weightSum">Total: 100</div>
       </div>
 
+      <!-- Options Filtering -->
+      <div class="setting-group">
+        <h4>Options Liquidity Filter</h4>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="pennyPilotOnly" style="accent-color:var(--accent);width:14px;height:14px;" />
+            <span>Penny Pilot Only (recommended)</span>
+          </label>
+          <span style="font-size:9.5px;color:var(--text-faint);margin-top:2px;">Rejects tickers not on the CBOE penny-wide list. <span id="ppCount" style="color:var(--accent);">—</span> symbols whitelisted.</span>
+        </div>
+        <div class="field">
+          <label>Max Options Spread % (auto-hide)</label>
+          <div class="range-row">
+            <input type="range" min="3" max="50" id="maxSpreadPct" value="15" />
+            <span class="range-val" id="maxSpreadPctVal">15%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Min ATM Open Interest (auto-hide)</label>
+          <div class="range-row">
+            <input type="range" min="0" max="5000" step="100" id="minOptOI" value="500" />
+            <span class="range-val" id="minOptOIval">500</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Max DTE for Spread Check</label>
+          <div class="range-row">
+            <input type="range" min="0" max="30" id="maxDTE" value="14" />
+            <span class="range-val" id="maxDTEval">14d</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Options Check Interval (seconds)</label>
+          <div class="range-row">
+            <input type="range" min="30" max="300" step="10" id="optInterval" value="60" />
+            <span class="range-val" id="optIntervalVal">60s</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="saveOptionsFilter()">Save Options Filter</button>
+        </div>
+      </div>
+
       <!-- Behavior -->
       <div class="setting-group">
         <h4>Behavior</h4>
@@ -711,6 +754,8 @@
             <th>Aft-Hrs</th>
             <th>Rel Vol</th>
             <th>Opt Liq</th>
+            <th>Spread%</th>
+            <th>Opt OI</th>
             <th>Score</th>
             <th>Dir</th>
             <th>ΔScore</th>
@@ -719,7 +764,7 @@
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="12"><div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div></td></tr>
+          <tr><td colspan="14"><div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div></td></tr>
         </tbody>
       </table>
     </div>
@@ -783,9 +828,41 @@ const LS_KEYS = {
   feed: 'ms_feed',
   weights: 'ms_weights',
   behavior: 'ms_behavior',
+  optionsFilter: 'ms_options_filter',
   history: 'ms_history_v1',
   activeTickers: 'ms_active_tickers'
 };
+
+/* Penny Pilot / "Penny Interval" whitelist.
+   These tickers trade in $0.01 increments on sub-$3 options and $0.05 above that,
+   vs default $0.05 / $0.10. This correlates ~perfectly with tight ATM spreads on
+   weekly/daily expirations. List maintained by Cboe; verify periodically. */
+const PENNY_PILOT = new Set([
+  // Mega-cap tech
+  'AAPL','MSFT','AMZN','GOOGL','GOOG','META','NVDA','TSLA','NFLX','ADBE','CRM','ORCL','CSCO','INTC','AMD','QCOM','AVGO','TXN','MU','AMAT','LRCX','KLAC','ASML','ARM',
+  // Major ETFs
+  'SPY','QQQ','IWM','DIA','XLF','XLE','XLK','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','SMH','SOXX','SOXL','SOXS','TQQQ','SQQQ','UVXY','VXX','SVXY','TLT','TBT','GLD','SLV','USO','UNG','EEM','EFA','FXI','EWZ','INDA','HYG','JNK','LQD','AGG','VTI','VOO','VTV','VUG','ARKK','ARKQ','ARKW','ARKG','ARKF','MAGS','IBIT','FBTC','ETHA','SPXL','SPXS','TNA','TZA','LABU','LABD','FAS','FAZ',
+  // Financials
+  'JPM','BAC','WFC','C','GS','MS','BRK.B','V','MA','AXP','PYPL','SQ','BLK','SCHW','COF','USB','PNC','TFC','MET','PRU','AIG','AFL','ALL','TRV','CB','COIN','HOOD','SOFI','AFRM','UPST','LMND',
+  // Consumer & retail
+  'WMT','COST','TGT','HD','LOW','NKE','SBUX','MCD','CMG','DIS','LULU','ULTA','ROST','TJX','BBY','KSS','M','GPS','DKS','DG','DLTR','FL','ANF','AEO','BURL',
+  // Industrials / energy / autos
+  'GE','CAT','DE','BA','LMT','RTX','NOC','GD','HON','MMM','UPS','FDX','UNP','CSX','NSC','F','GM','RIVN','LCID','NIO','XPEV','LI','FSR','NKLA','CCL','RCL','NCLH','AAL','UAL','DAL','LUV','XOM','CVX','COP','OXY','SLB','HAL','EOG','PXD','MRO','DVN','APA','HES','FANG','PSX','VLO','MPC',
+  // Pharma / biotech / healthcare
+  'JNJ','PFE','MRK','LLY','ABBV','BMY','GILD','AMGN','BIIB','REGN','VRTX','MRNA','BNTX','NVAX','PLUG','FCEL','SAVA','UNH','CVS','CI','HUM','ANTM','HCA','TMO','DHR','ABT','MDT','SYK','BSX','ISRG','ZTS','HOLX','IDXX','DXCM','PODD','IQV',
+  // Comm / media / internet
+  'T','VZ','TMUS','CHTR','CMCSA','DISH','PARA','WBD','FOX','FOXA','ROKU','SPOT','SHOP','EBAY','ETSY','PINS','SNAP','UBER','LYFT','ABNB','DASH','BKNG','EXPE','TRIP','DKNG','PENN','CZR','WYNN','MGM','LVS','RBLX','EA','TTWO','ATVI','U','DDOG','NET','SNOW','CRWD','ZS','PANW','FTNT','OKTA','PLTR','TEAM','MDB','DOCU','ZM','WORK','SPLK','TWLO','ESTC','CFLT','GTLB',
+  // REITs / utilities
+  'AMT','PLD','CCI','EQIX','DLR','O','SPG','AVB','EQR','WELL','PSA','VICI','VTR','SBAC','SO','NEE','DUK','D','AEP','EXC','SRE','XEL','PCG','ED','EIX','PEG','WEC','ES','ETR','DTE','PPL','CMS','AES','AEE',
+  // Materials / misc
+  'FCX','NEM','GOLD','AA','X','CLF','MT','VALE','RIO','BHP','SCCO','STLD','NUE','CF','MOS','FMC','LIN','APD','SHW','ECL','PPG','DD','DOW','LYB','CE','ALB','WRB',
+  // China ADRs / EM
+  'BABA','JD','PDD','BIDU','NTES','TCOM','TME','VIPS','NIO','LI','XPEV','BILI','IQ','TAL','EDU','YMM','DIDI','BZ','ZH','MNSO','TIGR','FUTU','DQ','JKS','CSIQ','BEKE',
+  // High-profile movers often in momentum scans
+  'GME','AMC','BBBY','BB','NOK','WISH','CLOV','WKHS','TLRY','CGC','ACB','SNDL','HEXO','APHA','CRON','TLRY','MARA','RIOT','CLSK','HUT','BITF','BTBT','CAN','CIFR','WULF','APLD','HIVE','GREE','SMCI','VRT','POWL','BE','FLNC','STEM','CHPT','BLNK','EVGO','WKSP','NKLA','GOEV','RIDE','HYLN','QS','MVIS','LAZR','VLDR','INVZ','OUST',
+  // Other frequently-traded names
+  'T','INTC','CSCO','IBM','HPQ','HPE','DELL','STX','WDC','NTAP','ANET','ZBRA','JNPR','NVDA','AVGO','MRVL','ADI','NXPI','ON','SWKS','QRVO','TER','ACLS','AEHR','RMBS','SITM','WOLF','CRDO','NVTS','IOT','ESTC','SPT','BOX','DBX','HUBS','NOW','WDAY','CRM','INTU','ADP','PAYX','PAYC','CDAY','PCTY','FICO','FDS','MORN','MCO','SPGI','VRSK','BR','IT','ACN','CTSH','INFY','WIT','EPAM','GLOB','EXLS','FIS','FISV','GPN','WU','MA','V','DFS','SYF','ALLY','CIT','NAVI','SLM','LEND'
+]);
 
 // ---------- STATE ----------
 const state = {
@@ -923,6 +1000,42 @@ function getBehavior() {
   return lsGet(LS_KEYS.behavior, { smoothLag:60, highThresh:75, lowThresh:25, minRefresh:5 });
 }
 
+function saveOptionsFilter() {
+  const of = {
+    pennyPilotOnly: qs('pennyPilotOnly').checked,
+    maxSpreadPct: +qs('maxSpreadPct').value,
+    minOptOI: +qs('minOptOI').value,
+    maxDTE: +qs('maxDTE').value,
+    optInterval: +qs('optInterval').value
+  };
+  lsSet(LS_KEYS.optionsFilter, of);
+  toast('Options filter saved', 'ok');
+  render();
+}
+function loadOptionsFilter() {
+  const of = lsGet(LS_KEYS.optionsFilter, {
+    pennyPilotOnly: true, maxSpreadPct: 15, minOptOI: 500, maxDTE: 14, optInterval: 60
+  });
+  qs('pennyPilotOnly').checked = of.pennyPilotOnly !== false;
+  qs('maxSpreadPct').value = of.maxSpreadPct ?? 15;
+  qs('minOptOI').value = of.minOptOI ?? 500;
+  qs('maxDTE').value = of.maxDTE ?? 14;
+  qs('optInterval').value = of.optInterval ?? 60;
+  qs('ppCount').textContent = PENNY_PILOT.size;
+  refreshOptionsFilterLabels();
+}
+function refreshOptionsFilterLabels() {
+  qs('maxSpreadPctVal').textContent = qs('maxSpreadPct').value + '%';
+  qs('minOptOIval').textContent = qs('minOptOI').value;
+  qs('maxDTEval').textContent = qs('maxDTE').value + 'd';
+  qs('optIntervalVal').textContent = qs('optInterval').value + 's';
+}
+function getOptionsFilter() {
+  return lsGet(LS_KEYS.optionsFilter, {
+    pennyPilotOnly: true, maxSpreadPct: 15, minOptOI: 500, maxDTE: 14, optInterval: 60
+  });
+}
+
 // ---------- FEED STATUS ----------
 function updateFeedPill() {
   const feed = qs('feedSelect').value;
@@ -940,9 +1053,16 @@ function addTickers() {
   const raw = qs('tickerInput').value;
   const parts = raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));
   if (parts.length === 0) { toast('No valid tickers found', 'err'); return; }
-  let added = 0;
+  const of = getOptionsFilter();
+  let added = 0, rejected = 0;
   const now = Date.now();
+  const rejectedList = [];
   parts.forEach(t => {
+    if (of.pennyPilotOnly && !PENNY_PILOT.has(t)) {
+      rejected++;
+      rejectedList.push(t);
+      return;
+    }
     if (!state.active.has(t)) {
       state.active.set(t, {
         ticker: t,
@@ -952,7 +1072,8 @@ function addTickers() {
         pmPrice: null, ahPrice: null,
         volume: null, avgVol20: null, relVol: null,
         bid: null, ask: null, atr: null, ema9: null,
-        optOI: null, optSpread: null, optVol: null,
+        optOI: null, optSpread: null, optSpreadPct: null,
+        optLastChecked: 0, optBid: null, optAsk: null, optMid: null, optDTE: null,
         rawScore: 50,
         smoothScore: 50,
         firstSeenScore: null,
@@ -968,7 +1089,10 @@ function addTickers() {
   qs('tickerInput').value = '';
   saveActiveTickers();
   render();
-  toast(`Added ${added} new ticker${added!==1?'s':''} (${parts.length-added} duplicates skipped)`, 'ok');
+  let msg = `Added ${added} ticker${added!==1?'s':''}`;
+  if (rejected > 0) msg += ` · Rejected ${rejected} non-Penny-Pilot (${rejectedList.slice(0,5).join(', ')}${rejectedList.length>5?'...':''})`;
+  if (parts.length - added - rejected > 0) msg += ` · ${parts.length-added-rejected} duplicate${(parts.length-added-rejected)!==1?'s':''} skipped`;
+  toast(msg, rejected > added ? 'err' : 'ok', 5000);
 }
 
 function clearActive() {
@@ -993,7 +1117,8 @@ function restoreActiveTickers() {
         ticker: t, firstSeen: now, lastSeen: null,
         last:null, prevClose:null, pctChg:null, pmPrice:null, ahPrice:null,
         volume:null, avgVol20:null, relVol:null, bid:null, ask:null, atr:null, ema9:null,
-        optOI:null, optSpread:null, optVol:null,
+        optOI:null, optSpread:null, optSpreadPct:null,
+        optLastChecked:0, optBid:null, optAsk:null, optMid:null, optDTE:null,
         rawScore:50, smoothScore:50, firstSeenScore:null,
         direction30s:0, arrow:'flat',
         components: { VP:50, RV:50, PE:50, VE:50, OA:50 }
@@ -1042,11 +1167,16 @@ function computeRawScore(d) {
     const ratio = todayRange / d.atr;
     veScore = clamp(50 + (ratio - 0.5) * 60);
   }
-  // OA: Options Activity
+  // OA: Options Activity - now uses real chain data when available
   let oaScore = 50;
-  if (d.optVol && d.optOI && d.optOI > 0) {
-    const ratio = d.optVol / d.optOI;
-    oaScore = clamp(50 + 30 * Math.log2(Math.max(0.1, ratio * 4)));
+  if (d.optOI && d.optOI > 0 && d.optSpreadPct !== null && d.optSpreadPct !== undefined) {
+    // Tight spread + high OI = smart money is trading = higher conviction signal
+    // 1% spread with 5000 OI -> ~85
+    // 10% spread with 500 OI -> ~40
+    // 30% spread with 100 OI -> ~15
+    const spreadScore = 100 - Math.min(100, d.optSpreadPct * 4); // 0% spread -> 100, 25% -> 0
+    const oiScore = clamp(50 + 15 * Math.log2(Math.max(0.1, d.optOI / 500))); // 500 OI -> 50, 2000 -> ~80
+    oaScore = clamp(0.6 * spreadScore + 0.4 * oiScore);
   }
   d.components = { VP:vpScore, RV:rvScore, PE:peScore, VE:veScore, OA:oaScore };
   const w = getWeights();
@@ -1120,6 +1250,141 @@ async function fetchTradierQuotes(tickers) {
     low: q.low,
     open: q.open
   }));
+}
+
+/* ---------- OPTIONS CHAIN FETCH (Tradier) ---------- */
+
+async function fetchTradierExpirations(ticker) {
+  const key = lsGet(LS_KEYS.tradier, '');
+  const base = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1');
+  const url = `${base}/markets/options/expirations?symbol=${encodeURIComponent(ticker)}&includeAllRoots=true&strikes=false`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
+  });
+  if (!res.ok) throw new Error('expirations HTTP ' + res.status);
+  const json = await res.json();
+  const dates = json?.expirations?.date;
+  if (!dates) return [];
+  return Array.isArray(dates) ? dates : [dates];
+}
+
+async function fetchTradierChain(ticker, expiration) {
+  const key = lsGet(LS_KEYS.tradier, '');
+  const base = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1');
+  const url = `${base}/markets/options/chains?symbol=${encodeURIComponent(ticker)}&expiration=${encodeURIComponent(expiration)}&greeks=false`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
+  });
+  if (!res.ok) throw new Error('chain HTTP ' + res.status);
+  const json = await res.json();
+  const opts = json?.options?.option;
+  if (!opts) return [];
+  return Array.isArray(opts) ? opts : [opts];
+}
+
+function daysUntil(dateStr) {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const target = Date.UTC(y, m-1, d);
+  const now = Date.now();
+  return Math.max(0, Math.round((target - now) / 86400000));
+}
+
+/* Pick the best expiration: first one within maxDTE; if none, use the nearest overall.
+   Find the ATM strike (closest to spot), compute spread from the TIGHTER of call/put. */
+async function checkOptionsSpread(ticker, spot, maxDTE) {
+  if (!spot) throw new Error('no spot price');
+  const exps = await fetchTradierExpirations(ticker);
+  if (exps.length === 0) return null;
+  // pick nearest expiration within maxDTE, else nearest overall
+  let chosen = null;
+  for (const e of exps) {
+    const dte = daysUntil(e);
+    if (dte <= maxDTE) { chosen = { exp: e, dte }; break; }
+  }
+  if (!chosen) {
+    chosen = { exp: exps[0], dte: daysUntil(exps[0]) };
+  }
+  const chain = await fetchTradierChain(ticker, chosen.exp);
+  if (chain.length === 0) return null;
+  // find ATM strike
+  let atmStrike = null, minDiff = Infinity;
+  chain.forEach(opt => {
+    const diff = Math.abs(opt.strike - spot);
+    if (diff < minDiff) { minDiff = diff; atmStrike = opt.strike; }
+  });
+  const callATM = chain.find(o => o.strike === atmStrike && o.option_type === 'call');
+  const putATM  = chain.find(o => o.strike === atmStrike && o.option_type === 'put');
+  // compute spread % from whichever side is tighter
+  function sprInfo(opt) {
+    if (!opt || !opt.bid || !opt.ask || opt.ask <= 0) return null;
+    const mid = (opt.bid + opt.ask) / 2;
+    if (mid <= 0) return null;
+    return {
+      bid: opt.bid, ask: opt.ask, mid,
+      spread: opt.ask - opt.bid,
+      spreadPct: ((opt.ask - opt.bid) / mid) * 100,
+      oi: opt.open_interest || 0,
+      vol: opt.volume || 0
+    };
+  }
+  const callInfo = sprInfo(callATM);
+  const putInfo = sprInfo(putATM);
+  // pick the tighter (more liquid) side
+  let chosenSide = null;
+  if (callInfo && putInfo) {
+    chosenSide = callInfo.spreadPct <= putInfo.spreadPct ? callInfo : putInfo;
+  } else {
+    chosenSide = callInfo || putInfo;
+  }
+  if (!chosenSide) return null;
+  // use MAX OI between call and put ATM as representative liquidity
+  const maxOI = Math.max(callInfo?.oi || 0, putInfo?.oi || 0);
+  return {
+    strike: atmStrike,
+    expiration: chosen.exp,
+    dte: chosen.dte,
+    bid: chosenSide.bid,
+    ask: chosenSide.ask,
+    mid: chosenSide.mid,
+    spread: chosenSide.spread,
+    spreadPct: chosenSide.spreadPct,
+    oi: maxOI
+  };
+}
+
+/* Background sweep: walks active tickers, checks options spread for any stale one.
+   Rate limited — one ticker per interval tick. Spreads change slowly so this is plenty. */
+async function optionsSweep() {
+  const of = getOptionsFilter();
+  const now = Date.now();
+  const staleMs = of.optInterval * 1000;
+  // find oldest un-checked ticker
+  let target = null, oldest = Infinity;
+  state.active.forEach(d => {
+    if (!d.last) return; // need spot price first
+    const age = now - (d.optLastChecked || 0);
+    if (age >= staleMs && (d.optLastChecked || 0) < oldest) {
+      target = d; oldest = d.optLastChecked || 0;
+    }
+  });
+  if (!target) return;
+  target.optLastChecked = now; // mark attempted so we don't hammer errors
+  try {
+    const result = await checkOptionsSpread(target.ticker, target.last, of.maxDTE);
+    if (result) {
+      target.optBid = result.bid;
+      target.optAsk = result.ask;
+      target.optMid = result.mid;
+      target.optSpread = result.spread;
+      target.optSpreadPct = result.spreadPct;
+      target.optOI = result.oi;
+      target.optDTE = result.dte;
+    }
+  } catch(e) {
+    // silent fail per ticker; sweep continues
+    console.warn('options check failed for', target.ticker, e.message);
+  }
+  renderActive();
 }
 
 async function fetchSchwabQuotes(tickers) {
@@ -1319,11 +1584,12 @@ function downloadCSV(name, rows) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function exportActiveCSV() {
-  const rows = [['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','FirstSeen','LastSeen','MinutesSeen']];
+  const rows = [['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','OptBid','OptAsk','OptSpreadPct','OptOI','OptDTE','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','FirstSeen','LastSeen','MinutesSeen']];
   const now = Date.now();
   state.active.forEach(d => {
     rows.push([
       d.ticker, d.last, d.pctChg, d.volume, d.relVol, d.bid, d.ask,
+      d.optBid, d.optAsk, d.optSpreadPct?.toFixed(2), d.optOI, d.optDTE,
       d.rawScore?.toFixed(2), d.smoothScore?.toFixed(2), d.firstSeenScore?.toFixed(2),
       (d.rawScore - (d.firstSeenScore ?? d.rawScore)).toFixed(2),
       d.arrow, new Date(d.firstSeen).toISOString(),
@@ -1377,19 +1643,44 @@ function scoreColor(score) {
 
 function renderActive() {
   const b = getBehavior();
+  const of = getOptionsFilter();
   const tbody = qs('tbody');
-  const arr = Array.from(state.active.values());
-  qs('tblCount').textContent = arr.length;
-  qs('activeCount').textContent = arr.length;
+  const allArr = Array.from(state.active.values());
+  qs('activeCount').textContent = allArr.length;
+
+  // Auto-hide: drop tickers where we HAVE options data and it fails the thresholds.
+  // Tickers without options data yet are shown (we can't filter what we don't know).
+  const arr = allArr.filter(d => {
+    if (d.optSpreadPct !== null && d.optSpreadPct !== undefined) {
+      if (d.optSpreadPct > of.maxSpreadPct) return false;
+    }
+    if (d.optOI !== null && d.optOI !== undefined && d.optOI > 0) {
+      if (d.optOI < of.minOptOI) return false;
+    }
+    return true;
+  });
+  const hiddenCount = allArr.length - arr.length;
+  qs('tblCount').textContent = hiddenCount > 0
+    ? `${arr.length} (+${hiddenCount} hidden)`
+    : arr.length;
+
   if (arr.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12"><div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div></td></tr>';
+    const msg = allArr.length === 0
+      ? '<div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div>'
+      : '<div class="empty-state"><div class="big">All tickers hidden</div>All active tickers failed the options liquidity filter. Relax thresholds in Configuration or add different tickers.</div>';
+    tbody.innerHTML = `<tr><td colspan="14">${msg}</td></tr>`;
     return;
   }
-  // sort: smoothScore desc, then options liquidity grade (A < B < C < D so invert)
+  // sort: smoothScore desc, then options spread (tighter first), then stock liquidity grade
   const gradeRank = { A:0, B:1, C:2, D:3, unk:4 };
   arr.sort((a,b) => {
     const ds = (b.smoothScore ?? 0) - (a.smoothScore ?? 0);
     if (Math.abs(ds) > 0.01) return ds;
+    // Tiebreaker 1: tighter options spread wins
+    const sa = a.optSpreadPct ?? 999;
+    const sb = b.optSpreadPct ?? 999;
+    if (Math.abs(sa - sb) > 0.1) return sa - sb;
+    // Tiebreaker 2: stock liquidity grade
     return (gradeRank[optionsLiquidityGrade(a)] ?? 9) - (gradeRank[optionsLiquidityGrade(b)] ?? 9);
   });
   const now = Date.now();
@@ -1403,6 +1694,20 @@ function renderActive() {
     const minSeen = ((now - d.firstSeen) / 60000).toFixed(1);
     const rowCls = score >= b.highThresh ? 'score-high' : score <= b.lowThresh ? 'score-low' : '';
     const pctClass = (d.pctChg ?? 0) > 0 ? 'up-txt' : (d.pctChg ?? 0) < 0 ? 'down-txt' : 'dim-txt';
+    // spread cell
+    let spreadCell = '<span class="faint-txt">—</span>';
+    if (d.optSpreadPct !== null && d.optSpreadPct !== undefined) {
+      const sp = d.optSpreadPct;
+      const cls = sp <= 5 ? 'up-txt' : sp <= 15 ? 'dim-txt' : 'down-txt';
+      const bgColor = sp <= 5 ? 'var(--up-soft)' : sp <= 15 ? 'var(--accent-soft)' : 'var(--down-soft)';
+      spreadCell = `<span style="padding:2px 6px;border-radius:2px;background:${bgColor};font-weight:600;" class="${cls}" title="ATM strike ${d.optDTE}DTE · bid ${d.optBid?.toFixed(2)} / ask ${d.optAsk?.toFixed(2)}">${sp.toFixed(1)}%</span>`;
+    }
+    // OI cell
+    let oiCell = '<span class="faint-txt">—</span>';
+    if (d.optOI !== null && d.optOI !== undefined) {
+      const cls = d.optOI >= 2000 ? 'up-txt' : d.optOI >= 500 ? 'dim-txt' : 'down-txt';
+      oiCell = `<span class="${cls}">${d.optOI.toLocaleString()}</span>`;
+    }
     return `<tr class="${rowCls}">
       <td class="left"><span class="ticker">${d.ticker}</span></td>
       <td>${fmtNum(d.last)}</td>
@@ -1411,6 +1716,8 @@ function renderActive() {
       <td class="dim-txt">${fmtNum(d.ahPrice)}</td>
       <td>${d.relVol !== null && d.relVol !== undefined ? fmtNum(d.relVol, 2)+'x' : '—'}</td>
       <td><span class="grade ${grade}">${grade==='unk'?'?':grade}</span></td>
+      <td>${spreadCell}</td>
+      <td>${oiCell}</td>
       <td>
         <div class="score-bar-wrap" title="Smooth: ${score.toFixed(2)} | Raw: ${d.rawScore.toFixed(2)}">
           <div class="score-bar-fill" style="width:${score}%;background:${scoreColor(score)}"></div>
@@ -1475,6 +1782,7 @@ function pauseResume() {
 
 // ---------- CLOCK LOOP ----------
 let lastPollAt = 0;
+let lastOptSweepAt = 0;
 function tickClock() {
   const now = Date.now();
   state.refreshIntervalSec = computeRefreshInterval();
@@ -1488,12 +1796,22 @@ function tickClock() {
     lastPollAt = now;
     pollOnce();
   }
+  // Options sweep runs at most every 3 seconds (picks one stale ticker per call).
+  // Individual tickers are throttled by their own optLastChecked timestamp vs optInterval.
+  if (!state.paused && (now - lastOptSweepAt) >= 3000 && state.active.size > 0) {
+    const feed = qs('feedSelect').value;
+    if (feed === 'tradier') {
+      lastOptSweepAt = now;
+      optionsSweep();
+    }
+  }
 }
 
 // ---------- INIT ----------
 function init() {
   loadKeys();
   loadSettings();
+  loadOptionsFilter();
   state.history = lsGet(LS_KEYS.history, {}) || {};
   restoreActiveTickers();
 
@@ -1503,6 +1821,9 @@ function init() {
   });
   ['smoothLag','highThresh','lowThresh','minRefresh'].forEach(id => {
     qs(id).addEventListener('input', refreshBehaviorLabels);
+  });
+  ['maxSpreadPct','minOptOI','maxDTE','optInterval'].forEach(id => {
+    qs(id).addEventListener('input', refreshOptionsFilterLabels);
   });
   qs('feedSelect').addEventListener('change', () => { lsSet(LS_KEYS.feed, qs('feedSelect').value); updateFeedPill(); });
 
