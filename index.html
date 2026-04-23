@@ -1,1842 +1,556 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MomScanner · Momentum Scoring Terminal</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MomScanner v3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg-base: #0a0e12;
-    --bg-panel: #121820;
-    --bg-panel-2: #1a2230;
-    --bg-row: #0f1419;
-    --bg-row-hover: #1a2230;
-    --border: #253040;
-    --border-soft: #1c2633;
-    --text: #d9e2ec;
-    --text-dim: #8895a7;
-    --text-faint: #4a5a6e;
-    --accent: #ffaa00;
-    --accent-soft: #ffaa0022;
-    --up: #00d68a;
-    --up-soft: #00d68a22;
-    --down: #ff4d5e;
-    --down-soft: #ff4d5e22;
-    --neutral: #6c7a8e;
-    --blue: #4aa3ff;
-    --blue-soft: #4aa3ff22;
-    --score-high: #00ff9d;
-    --score-low: #ff3860;
-    --shadow: 0 8px 32px rgba(0,0,0,0.4);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    background: var(--bg-base);
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    line-height: 1.45;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse at top left, rgba(255,170,0,0.04), transparent 50%),
-      radial-gradient(ellipse at bottom right, rgba(74,163,255,0.03), transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .app { position: relative; z-index: 1; padding: 16px; max-width: 1800px; margin: 0 auto; }
+:root {
+  --bg-base:#0a0e12; --bg-panel:#121820; --bg-panel-2:#1a2230; --bg-row:#0f1419;
+  --border:#253040; --border-soft:#1c2633;
+  --text:#d9e2ec; --text-dim:#8895a7; --text-faint:#4a5a6e;
+  --accent:#ffaa00; --accent-soft:#ffaa0018;
+  --up:#00d68a; --up-soft:#00d68a15; --down:#ff4d5e; --down-soft:#ff4d5e15;
+  --neutral:#6c7a8e; --blue:#4aa3ff;
+  --spread-good-bg:rgba(0,214,138,0.14); --spread-good-fg:#00d68a;
+  --spread-warn-bg:rgba(255,170,0,0.14); --spread-warn-fg:#ffaa00;
+  --spread-bad-bg:rgba(255,77,94,0.14); --spread-bad-fg:#ff4d5e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg-base);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.45;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at top left,rgba(255,170,0,0.03),transparent 50%),radial-gradient(ellipse at bottom right,rgba(74,163,255,0.02),transparent 50%);pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;padding:12px 16px;max-width:1400px;margin:0 auto}
 
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 14px 20px;
-    background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    margin-bottom: 12px;
-  }
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 22px;
-    letter-spacing: -0.5px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .logo-mark {
-    width: 10px; height: 22px;
-    background: linear-gradient(180deg, var(--accent) 0%, var(--up) 100%);
-    border-radius: 1px;
-    box-shadow: 0 0 16px var(--accent-soft);
-  }
-  .logo-sub {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 400;
-    font-size: 10px;
-    color: var(--text-faint);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-left: 2px;
-  }
-  .status-pills {
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-  }
-  .pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 10px;
-    background: var(--bg-row);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    font-size: 11px;
-    color: var(--text-dim);
-    white-space: nowrap;
-  }
-  .pill strong { color: var(--text); font-weight: 500; }
-  .pill .dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--neutral);
-  }
-  .pill .dot.live { background: var(--up); box-shadow: 0 0 8px var(--up); animation: pulse 2s infinite; }
-  .pill .dot.err { background: var(--down); }
-  .pill .dot.warn { background: var(--accent); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+/* ---- HEADER ---- */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;margin-bottom:8px}
+.hdr-left{display:flex;align-items:center;gap:8px}
+.hdr-mark{width:6px;height:20px;background:linear-gradient(180deg,var(--accent),var(--up));border-radius:1px}
+.hdr-name{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--text);letter-spacing:-0.3px}
+.hdr-sub{font-size:9px;color:var(--text-faint);letter-spacing:1.5px;text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-dim)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:var(--bg-row);border:1px solid var(--border-soft);border-radius:3px;font-size:10.5px;color:var(--text-dim);white-space:nowrap}
+.pill strong{color:var(--text);font-weight:500}
+.dot-live{width:5px;height:5px;border-radius:50%;background:var(--up);display:inline-block;box-shadow:0 0 6px var(--up);animation:pulse 2s infinite}
+.dot-err{width:5px;height:5px;border-radius:50%;background:var(--down);display:inline-block}
+.dot-warn{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.gear-btn{width:28px;height:28px;border-radius:4px;border:1px solid var(--border);background:var(--bg-panel-2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);transition:border-color .15s,color .15s}
+.gear-btn:hover{border-color:var(--accent);color:var(--accent)}
+.gear-btn svg{width:14px;height:14px}
 
-  /* Settings panel */
-  .settings {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    margin-bottom: 12px;
-    overflow: hidden;
-  }
-  .settings-head {
-    padding: 10px 16px;
-    display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
-    background: var(--bg-panel-2);
-    border-bottom: 1px solid var(--border);
-  }
-  .settings-head:hover { background: #1f2937; }
-  .settings-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 13px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--accent);
-    display: flex; align-items: center; gap: 10px;
-  }
-  .settings-title svg { width: 14px; height: 14px; }
-  .caret { font-size: 10px; color: var(--text-dim); transition: transform 0.2s; }
-  .settings.collapsed .caret { transform: rotate(-90deg); }
-  .settings.collapsed .settings-body { display: none; }
-  .settings-body {
-    padding: 16px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 14px;
-  }
-  .setting-group {
-    background: var(--bg-row);
-    border: 1px solid var(--border-soft);
-    border-radius: 3px;
-    padding: 12px;
-  }
-  .setting-group h4 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border-soft);
-  }
-  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-  .field:last-child { margin-bottom: 0; }
-  .field label {
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-weight: 500;
-  }
-  .field input, .field select {
-    background: var(--bg-base);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 7px 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    border-radius: 2px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .field input:focus, .field select:focus { border-color: var(--accent); }
-  .field input[type=range] { padding: 0; accent-color: var(--accent); }
-  .range-row { display: flex; align-items: center; gap: 10px; }
-  .range-row input[type=range] { flex: 1; }
-  .range-val {
-    font-size: 12px;
-    color: var(--accent);
-    min-width: 42px;
-    text-align: right;
-    font-weight: 500;
-  }
-  .btn {
-    background: var(--bg-panel-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    padding: 7px 14px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.15s;
-  }
-  .btn:hover { background: #223043; border-color: var(--accent); color: var(--accent); }
-  .btn.primary {
-    background: var(--accent);
-    color: #000;
-    border-color: var(--accent);
-    font-weight: 600;
-  }
-  .btn.primary:hover { background: #ffbb33; color: #000; }
-  .btn.danger:hover { border-color: var(--down); color: var(--down); }
-  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+/* ---- INPUT BAR ---- */
+.input-bar{display:flex;gap:6px;padding:8px 12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;margin-bottom:8px}
+.input-bar textarea{flex:1;background:var(--bg-base);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:12px;border-radius:3px;outline:none;resize:none;min-height:30px;max-height:80px}
+.input-bar textarea:focus{border-color:var(--accent)}
+.input-bar textarea::placeholder{color:var(--text-faint)}
+.btn{background:var(--bg-panel-2);color:var(--text-dim);border:1px solid var(--border);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:.3px;text-transform:uppercase;cursor:pointer;border-radius:3px;transition:all .12s;white-space:nowrap}
+.btn:hover{background:#223043;border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{background:#ffbb33}
+.btn.danger:hover{border-color:var(--down);color:var(--down)}
 
-  /* Input bar */
-  .input-bar {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: 8px;
-    padding: 12px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    margin-bottom: 12px;
-  }
-  .input-bar textarea {
-    background: var(--bg-base);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    border-radius: 2px;
-    outline: none;
-    resize: vertical;
-    min-height: 38px;
-    max-height: 120px;
-  }
-  .input-bar textarea:focus { border-color: var(--accent); }
-  .input-bar textarea::placeholder { color: var(--text-faint); }
+/* ---- MAIN TABLE PANEL ---- */
+.tbl-panel{background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:8px}
 
-  /* Main table */
-  .table-wrap {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
-  .table-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px;
-    background: var(--bg-panel-2);
-    border-bottom: 1px solid var(--border);
-  }
-  .table-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 12px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--text);
-  }
-  .table-title .count {
-    color: var(--accent);
-    margin-left: 6px;
-    font-weight: 700;
-  }
-  .table-scroll { overflow-x: auto; max-height: 60vh; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11.5px;
-  }
-  thead th {
-    position: sticky; top: 0;
-    background: var(--bg-panel-2);
-    color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 500;
-    font-size: 9.5px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 10px 8px;
-    text-align: right;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    z-index: 2;
-  }
-  thead th:first-child, thead th.left { text-align: left; }
-  tbody tr {
-    border-bottom: 1px solid var(--border-soft);
-    transition: background 0.1s;
-  }
-  tbody tr:hover { background: var(--bg-row-hover); }
-  tbody tr.score-high { background: linear-gradient(90deg, rgba(0,214,138,0.08), transparent 60%); }
-  tbody tr.score-low { background: linear-gradient(90deg, rgba(255,77,94,0.08), transparent 60%); }
-  tbody td {
-    padding: 9px 8px;
-    text-align: right;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-  }
-  tbody td:first-child, tbody td.left { text-align: left; }
-  .ticker {
-    font-weight: 700;
-    font-size: 13px;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.5px;
-  }
-  .up-txt { color: var(--up); }
-  .down-txt { color: var(--down); }
-  .dim-txt { color: var(--text-dim); }
-  .faint-txt { color: var(--text-faint); }
+/* Section headers inside table */
+.sec-head{display:flex;align-items:center;gap:7px;padding:7px 14px}
+.sec-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sec-dot-outline{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--text-faint);flex-shrink:0}
+.sec-label{font-family:'Syne',sans-serif;font-weight:600;font-size:11.5px;letter-spacing:.5px;text-transform:uppercase}
+.sec-sub{font-size:10.5px;color:var(--text-faint)}
+.sec-divider{border-top:2px solid var(--border)}
 
-  /* Score cell */
-  .score-cell {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 3px 8px;
-    border-radius: 2px;
-    font-weight: 600;
-    font-size: 12px;
-    min-width: 42px;
-    justify-content: center;
-  }
-  .score-bar-wrap {
-    position: relative;
-    width: 60px;
-    height: 18px;
-    background: var(--bg-base);
-    border: 1px solid var(--border-soft);
-    border-radius: 2px;
-    overflow: hidden;
-    display: inline-block;
-    vertical-align: middle;
-  }
-  .score-bar-fill {
-    position: absolute;
-    top: 0; left: 0; bottom: 0;
-    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s;
-  }
-  .score-bar-text {
-    position: absolute;
-    inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700;
-    font-size: 11px;
-    color: var(--text);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-    font-variant-numeric: tabular-nums;
-  }
-  .arrow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    font-size: 14px;
-    font-weight: 700;
-  }
-  .arrow.up { background: var(--up-soft); color: var(--up); }
-  .arrow.down { background: var(--down-soft); color: var(--down); }
-  .arrow.flat { background: rgba(108,122,142,0.15); color: var(--neutral); }
-  .delta { font-weight: 600; font-size: 11.5px; }
-  .delta.up { color: var(--up); }
-  .delta.down { color: var(--down); }
-  .delta.flat { color: var(--neutral); }
-  .grade {
-    display: inline-block;
-    width: 20px; height: 20px;
-    line-height: 18px;
-    text-align: center;
-    border-radius: 2px;
-    font-weight: 700;
-    font-size: 10.5px;
-  }
-  .grade.A { background: var(--up-soft); color: var(--up); border: 1px solid var(--up); }
-  .grade.B { background: var(--blue-soft); color: var(--blue); border: 1px solid var(--blue); }
-  .grade.C { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
-  .grade.D { background: var(--down-soft); color: var(--down); border: 1px solid var(--down); }
-  .grade.unk { background: transparent; color: var(--text-faint); border: 1px solid var(--border); }
-  .empty-state {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-faint);
-    font-size: 12px;
-  }
-  .empty-state .big {
-    font-family: 'Syne', sans-serif;
-    font-size: 18px;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
+/* Grid rows */
+.tbl-scroll{overflow-x:auto;max-height:65vh;overflow-y:auto}
+.g-row{display:grid;grid-template-columns:26px 66px minmax(56px,1fr) 52px 52px 56px 44px 82px 26px 44px 40px;gap:0;padding:7px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums}
+.g-row:hover{background:var(--bg-panel-2)}
+.g-hdr{font-size:9.5px;color:var(--text-faint);letter-spacing:.6px;text-transform:uppercase;border-bottom:1px solid var(--border);padding:5px 14px;position:sticky;top:0;background:var(--bg-panel-2);z-index:2}
+.g-hdr:hover{background:var(--bg-panel-2)}
+.r{text-align:right}.c{text-align:center}
 
-  /* History panel */
-  .history {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
-  .hist-head {
-    padding: 10px 14px;
-    display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
-    background: var(--bg-panel-2);
-    border-bottom: 1px solid var(--border);
-  }
-  .hist-head:hover { background: #1f2937; }
-  .hist-body { padding: 12px 14px; }
-  .history.collapsed .hist-body { display: none; }
-  .history.collapsed .caret { transform: rotate(-90deg); }
-  .hist-stats {
-    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;
-  }
-  .stat-tile {
-    background: var(--bg-row);
-    border: 1px solid var(--border-soft);
-    border-radius: 3px;
-    padding: 8px 12px;
-    min-width: 100px;
-  }
-  .stat-tile .label {
-    font-size: 9px;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    margin-bottom: 2px;
-  }
-  .stat-tile .val {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-  }
-  .stat-tile .val.accent { color: var(--accent); }
+/* Row variants */
+.row-bull{background:rgba(0,214,138,0.04)}
+.row-bear{background:rgba(255,77,94,0.03)}
+.row-fade{opacity:.45;transition:opacity .3s}
 
-  /* Toast */
-  .toast-container {
-    position: fixed;
-    bottom: 20px; right: 20px;
-    display: flex; flex-direction: column; gap: 8px;
-    z-index: 1000;
-    pointer-events: none;
-  }
-  .toast {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    padding: 10px 14px;
-    border-radius: 3px;
-    font-size: 12px;
-    color: var(--text);
-    box-shadow: var(--shadow);
-    animation: slideIn 0.3s ease;
-    pointer-events: auto;
-    max-width: 340px;
-  }
-  .toast.err { border-left-color: var(--down); }
-  .toast.ok { border-left-color: var(--up); }
-  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* Ticker name */
+.tkr{font-weight:700;font-size:13.5px;color:var(--text);letter-spacing:.3px}
 
-  /* Weight sliders */
-  .weight-row {
-    display: grid;
-    grid-template-columns: 130px 1fr 36px;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 6px;
-  }
-  .weight-row label {
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-  }
-  .weight-sum {
-    text-align: right;
-    font-size: 10px;
-    color: var(--text-faint);
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px solid var(--border-soft);
-  }
-  .weight-sum.bad { color: var(--down); }
+/* Score bar */
+.score-bar{position:relative;width:38px;height:15px;background:var(--bg-base);border:1px solid var(--border-soft);border-radius:2px;overflow:hidden;display:inline-block}
+.score-fill{position:absolute;top:0;left:0;bottom:0;transition:width .6s cubic-bezier(.4,0,.2,1),background .4s}
+.score-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:var(--text);text-shadow:0 1px 2px rgba(0,0,0,.8)}
 
-  /* Info tooltip */
-  details.info {
-    background: var(--bg-row);
-    border: 1px solid var(--border-soft);
-    border-radius: 3px;
-    padding: 8px 12px;
-    margin-bottom: 12px;
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-  details.info summary {
-    cursor: pointer;
-    color: var(--accent);
-    font-weight: 500;
-    list-style: none;
-  }
-  details.info summary::before { content: '▸ '; }
-  details[open].info summary::before { content: '▾ '; }
-  details.info p { margin-top: 8px; line-height: 1.6; }
-  details.info code { background: var(--bg-base); padding: 1px 5px; border-radius: 2px; color: var(--accent); }
+/* Spread pill */
+.spill{font-size:10px;padding:2px 5px;border-radius:3px;font-weight:600;display:inline-block}
+.sp-g{background:var(--spread-good-bg);color:var(--spread-good-fg)}
+.sp-w{background:var(--spread-warn-bg);color:var(--spread-warn-fg)}
+.sp-b{background:var(--spread-bad-bg);color:var(--spread-bad-fg)}
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--bg-base); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+/* Action dot */
+.act{width:10px;height:10px;border-radius:50%;display:inline-block}
+.act-bull{background:var(--up)}
+.act-bear{background:var(--down)}
+.act-outline{background:transparent;border:1.5px solid var(--text-faint)}
+.act-dashed{background:transparent;border:1.5px dashed var(--text-faint)}
 
-  @media (max-width: 900px) {
-    .input-bar { grid-template-columns: 1fr; }
-    .header { flex-direction: column; align-items: flex-start; }
-  }
+/* Arrow */
+.arr{display:inline-flex;width:19px;height:19px;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:600}
+.arr-up{background:var(--up-soft);color:var(--up)}
+.arr-down{background:var(--down-soft);color:var(--down)}
+.arr-flat{background:rgba(108,122,142,.12);color:var(--neutral)}
+
+/* Color classes */
+.c-up{color:var(--up)}.c-down{color:var(--down)}.c-dim{color:var(--text-dim)}.c-faint{color:var(--text-faint)}.c-accent{color:var(--accent)}
+
+/* Empty */
+.empty{padding:30px 16px;text-align:center;color:var(--text-faint);font-size:12px}
+.empty .big{font-family:'Syne',sans-serif;font-size:16px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1.5px;text-transform:uppercase}
+
+/* Footer bar */
+.foot{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-top:1px solid var(--border);font-size:10.5px;color:var(--text-faint)}
+
+/* ---- SLIDE-OUT SETTINGS ---- */
+.settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.settings-overlay.open{opacity:1;pointer-events:auto}
+.settings-drawer{position:fixed;top:0;right:-420px;bottom:0;width:400px;background:var(--bg-panel);border-left:1px solid var(--border);z-index:101;transition:right .25s ease;overflow-y:auto;padding:16px}
+.settings-drawer.open{right:0}
+.sd-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sd-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--accent)}
+.sd-close{width:28px;height:28px;border-radius:4px;border:1px solid var(--border);background:var(--bg-panel-2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);font-size:16px}
+.sd-close:hover{border-color:var(--down);color:var(--down)}
+.sg{background:var(--bg-row);border:1px solid var(--border-soft);border-radius:3px;padding:12px;margin-bottom:12px}
+.sg h4{font-family:'Syne',sans-serif;font-weight:600;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border-soft)}
+.fld{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.fld:last-child{margin-bottom:0}
+.fld label{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-weight:500}
+.fld input,.fld select{background:var(--bg-base);border:1px solid var(--border);color:var(--text);padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:11px;border-radius:2px;outline:none}
+.fld input:focus,.fld select:focus{border-color:var(--accent)}
+.rng-row{display:flex;align-items:center;gap:8px}
+.rng-row input[type=range]{flex:1;accent-color:var(--accent)}
+.rng-val{font-size:11px;color:var(--accent);min-width:36px;text-align:right;font-weight:500}
+.w-row{display:grid;grid-template-columns:120px 1fr 32px;gap:6px;align-items:center;margin-bottom:5px}
+.w-row label{font-size:9.5px;color:var(--text-dim);text-transform:uppercase}
+.w-sum{text-align:right;font-size:10px;color:var(--text-faint);margin-top:4px;padding-top:4px;border-top:1px solid var(--border-soft)}
+.w-sum.bad{color:var(--down)}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chk-row{display:flex;align-items:center;gap:7px;cursor:pointer}
+.chk-row input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px}
+
+/* ---- HISTORY PANEL ---- */
+.hist-panel{background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:8px}
+.hist-head{padding:8px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;background:var(--bg-panel-2);border-bottom:1px solid var(--border)}
+.hist-head:hover{background:#1f2937}
+.hist-body{padding:10px 14px}
+.hist-panel.collapsed .hist-body{display:none}
+.hist-panel.collapsed .caret{transform:rotate(-90deg)}
+.caret{font-size:10px;color:var(--text-dim);transition:transform .2s}
+.hist-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.stat-tile{background:var(--bg-row);border:1px solid var(--border-soft);border-radius:3px;padding:6px 10px;min-width:80px}
+.stat-tile .slbl{font-size:8.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-bottom:1px}
+.stat-tile .sval{font-size:15px;font-weight:600;color:var(--text);font-family:'Syne',sans-serif}
+.stat-tile .sval.accent{color:var(--accent)}
+.hist-tbl-wrap{overflow-x:auto;max-height:25vh}
+.hist-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.hist-tbl thead th{position:sticky;top:0;background:var(--bg-panel-2);color:var(--text-faint);font-weight:500;font-size:9px;letter-spacing:.8px;text-transform:uppercase;padding:6px 6px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+.hist-tbl thead th:first-child{text-align:left}
+.hist-tbl tbody td{padding:5px 6px;text-align:right;white-space:nowrap}
+.hist-tbl tbody td:first-child{text-align:left}
+.hist-tbl tbody tr{border-bottom:1px solid var(--border-soft)}
+
+/* ---- INFO BOX ---- */
+.info-box{background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.info-head{padding:7px 14px;cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--accent);font-weight:500}
+.info-head:hover{background:var(--bg-panel-2)}
+.info-body{padding:10px 14px;font-size:11.5px;color:var(--text-dim);line-height:1.65;display:none}
+.info-box.open .info-body{display:block}
+.info-body code{background:var(--bg-base);padding:1px 4px;border-radius:2px;color:var(--accent);font-size:10.5px}
+
+/* ---- TOAST ---- */
+.toast-c{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;z-index:200;pointer-events:none}
+.toast{background:var(--bg-panel);border:1px solid var(--border);border-left:3px solid var(--accent);padding:8px 12px;border-radius:3px;font-size:11.5px;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,.4);animation:slideIn .25s ease;pointer-events:auto;max-width:320px}
+.toast.err{border-left-color:var(--down)}.toast.ok{border-left-color:var(--up)}
+@keyframes slideIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg-base)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+@media(max-width:800px){
+  .hdr{flex-direction:column;align-items:flex-start;gap:8px}
+  .input-bar{flex-direction:column}
+  .settings-drawer{width:100%;right:-100%}
+  .g-row{font-size:11px}
+}
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="logo">
-      <div class="logo-mark"></div>
-      <span>MomScanner</span>
-      <span class="logo-sub">MOMENTUM TERMINAL</span>
-    </div>
-    <div class="status-pills">
-      <div class="pill"><span class="dot" id="feedDot"></span>Feed: <strong id="feedLabel">—</strong></div>
-      <div class="pill">Active: <strong id="activeCount">0</strong></div>
-      <div class="pill">Refresh: <strong id="refreshLabel">—</strong>s</div>
-      <div class="pill">Next: <strong id="countdownLabel">—</strong>s</div>
-      <div class="pill">Last: <strong id="lastRefreshLabel">—</strong></div>
-    </div>
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-mark"></div>
+    <span class="hdr-name">MomScanner</span>
+    <span class="hdr-sub">MOMENTUM TERMINAL</span>
   </div>
-
-  <!-- SETTINGS -->
-  <div class="settings" id="settings">
-    <div class="settings-head" onclick="toggleSettings()">
-      <div class="settings-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Configuration
-      </div>
-      <span class="caret">▾</span>
-    </div>
-    <div class="settings-body">
-
-      <!-- Data Source -->
-      <div class="setting-group">
-        <h4>Data Source</h4>
-        <div class="field">
-          <label>Feed</label>
-          <select id="feedSelect">
-            <option value="tradier">Tradier (L1)</option>
-            <option value="schwab">Schwab</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Tradier API Key</label>
-          <input id="tradierKey" type="password" placeholder="Paste your Tradier key..." autocomplete="off" />
-        </div>
-        <div class="field">
-          <label>Tradier Environment</label>
-          <select id="tradierEnv">
-            <option value="https://api.tradier.com/v1">Production</option>
-            <option value="https://sandbox.tradier.com/v1">Sandbox</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Schwab App Key</label>
-          <input id="schwabKey" type="password" placeholder="Schwab App Key..." autocomplete="off" />
-        </div>
-        <div class="field">
-          <label>Schwab App Secret</label>
-          <input id="schwabSecret" type="password" placeholder="Schwab App Secret..." autocomplete="off" />
-        </div>
-        <div class="field">
-          <label>Schwab Callback URL</label>
-          <input id="schwabCallback" type="text" placeholder="https://yourname.github.io/MomScanner/" />
-        </div>
-        <div class="btn-row">
-          <button class="btn primary" onclick="saveKeys()">Save Keys</button>
-          <button class="btn" onclick="connectSchwab()">Connect Schwab OAuth</button>
-          <button class="btn" onclick="testFeed()">Test Feed</button>
-        </div>
-      </div>
-
-      <!-- Scoring -->
-      <div class="setting-group">
-        <h4>Score Weights (sum = 100)</h4>
-        <div class="weight-row">
-          <label>Volume Pressure</label>
-          <input type="range" min="0" max="60" id="wVP" value="30" />
-          <span class="range-val" id="wVPval">30</span>
-        </div>
-        <div class="weight-row">
-          <label>Relative Volume</label>
-          <input type="range" min="0" max="60" id="wRV" value="20" />
-          <span class="range-val" id="wRVval">20</span>
-        </div>
-        <div class="weight-row">
-          <label>Price vs EMA</label>
-          <input type="range" min="0" max="60" id="wPE" value="20" />
-          <span class="range-val" id="wPEval">20</span>
-        </div>
-        <div class="weight-row">
-          <label>Volatility Exp.</label>
-          <input type="range" min="0" max="60" id="wVE" value="15" />
-          <span class="range-val" id="wVEval">15</span>
-        </div>
-        <div class="weight-row">
-          <label>Options Activity</label>
-          <input type="range" min="0" max="60" id="wOA" value="15" />
-          <span class="range-val" id="wOAval">15</span>
-        </div>
-        <div class="weight-sum" id="weightSum">Total: 100</div>
-      </div>
-
-      <!-- Options Filtering -->
-      <div class="setting-group">
-        <h4>Options Liquidity Filter</h4>
-        <div class="field">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="pennyPilotOnly" style="accent-color:var(--accent);width:14px;height:14px;" />
-            <span>Penny Pilot Only (recommended)</span>
-          </label>
-          <span style="font-size:9.5px;color:var(--text-faint);margin-top:2px;">Rejects tickers not on the CBOE penny-wide list. <span id="ppCount" style="color:var(--accent);">—</span> symbols whitelisted.</span>
-        </div>
-        <div class="field">
-          <label>Max Options Spread % (auto-hide)</label>
-          <div class="range-row">
-            <input type="range" min="3" max="50" id="maxSpreadPct" value="15" />
-            <span class="range-val" id="maxSpreadPctVal">15%</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>Min ATM Open Interest (auto-hide)</label>
-          <div class="range-row">
-            <input type="range" min="0" max="5000" step="100" id="minOptOI" value="500" />
-            <span class="range-val" id="minOptOIval">500</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>Max DTE for Spread Check</label>
-          <div class="range-row">
-            <input type="range" min="0" max="30" id="maxDTE" value="14" />
-            <span class="range-val" id="maxDTEval">14d</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>Options Check Interval (seconds)</label>
-          <div class="range-row">
-            <input type="range" min="30" max="300" step="10" id="optInterval" value="60" />
-            <span class="range-val" id="optIntervalVal">60s</span>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary" onclick="saveOptionsFilter()">Save Options Filter</button>
-        </div>
-      </div>
-
-      <!-- Behavior -->
-      <div class="setting-group">
-        <h4>Behavior</h4>
-        <div class="field">
-          <label>Smoothing Lag (seconds)</label>
-          <div class="range-row">
-            <input type="range" min="10" max="180" id="smoothLag" value="60" />
-            <span class="range-val" id="smoothLagVal">60s</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>Green Threshold (score ≥)</label>
-          <div class="range-row">
-            <input type="range" min="50" max="95" id="highThresh" value="75" />
-            <span class="range-val" id="highThreshVal">75</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>Red Threshold (score ≤)</label>
-          <div class="range-row">
-            <input type="range" min="5" max="50" id="lowThresh" value="25" />
-            <span class="range-val" id="lowThreshVal">25</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>Min Refresh Seconds</label>
-          <div class="range-row">
-            <input type="range" min="3" max="30" id="minRefresh" value="5" />
-            <span class="range-val" id="minRefreshVal">5s</span>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary" onclick="saveSettings()">Save Settings</button>
-          <button class="btn" onclick="resetSettings()">Reset</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- INFO -->
-  <details class="info">
-    <summary>How this tool works · How the score is computed</summary>
-    <p><strong>Workflow:</strong> Paste tickers from your thinkorswim scan below. The tool polls your chosen data feed (Tradier or Schwab) on an adaptive interval. Each ticker gets a <strong>raw score</strong> computed from 5 weighted components. That raw score is smoothed with an EMA so it drifts instead of jumping. Direction arrow and Cumulative Score Change update in real time (no smoothing).</p>
-    <p><strong>The 5 score components:</strong></p>
-    <p>• <code>Volume Pressure</code> — proxy for buy vs sell volume using uptick/downtick proxy (last trade vs bid/ask midpoint).<br>
-    • <code>Relative Volume</code> — today's cumulative volume vs 20-day average, time-of-day adjusted.<br>
-    • <code>Price vs EMA</code> — distance from 9-period EMA, normalized by ATR(14) so a $15 stock and a $500 stock are comparable.<br>
-    • <code>Volatility Expansion</code> — current session range vs ATR(14), catches breakouts from consolidation.<br>
-    • <code>Options Activity</code> — proxy based on today's options volume vs open interest where available.</p>
-    <p>Raw score ranges 0–100; <strong>50 = balanced</strong>. Extreme readings (&gt;75 or &lt;25) indicate strong directional probability. The arrow and Cumulative columns update <em>every tick</em>; the main Score column is smoothed over your configured lag window.</p>
-  </details>
-
-  <!-- INPUT -->
-  <div class="input-bar">
-    <textarea id="tickerInput" placeholder="Paste tickers here (comma, space, or newline separated). Example: AAPL, MSFT NVDA TSLA&#10;SPY QQQ AMD..."></textarea>
-    <button class="btn primary" onclick="addTickers()">Add to Scan</button>
-    <button class="btn" onclick="pauseResume()"><span id="pauseLabel">Pause</span></button>
-    <button class="btn danger" onclick="clearActive()">Clear Active</button>
-  </div>
-
-  <!-- MAIN TABLE -->
-  <div class="table-wrap">
-    <div class="table-head">
-      <div class="table-title">Active Scan<span class="count" id="tblCount">0</span></div>
-      <div class="btn-row">
-        <button class="btn" onclick="exportActiveCSV()">Export Active CSV</button>
-      </div>
-    </div>
-    <div class="table-scroll">
-      <table id="mainTable">
-        <thead>
-          <tr>
-            <th class="left">Ticker</th>
-            <th>Last</th>
-            <th>%Chg</th>
-            <th>Pre-Mkt</th>
-            <th>Aft-Hrs</th>
-            <th>Rel Vol</th>
-            <th>Opt Liq</th>
-            <th>Spread%</th>
-            <th>Opt OI</th>
-            <th>Score</th>
-            <th>Dir</th>
-            <th>ΔScore</th>
-            <th>Min Seen</th>
-            <th>First Seen</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="14"><div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- HISTORY -->
-  <div class="history" id="history">
-    <div class="hist-head" onclick="toggleHistory()">
-      <div class="settings-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
-        History Archive
-      </div>
-      <span class="caret">▾</span>
-    </div>
-    <div class="hist-body">
-      <div class="hist-stats" id="histStats"></div>
-      <div class="btn-row" style="margin-bottom: 12px;">
-        <button class="btn primary" onclick="exportHistoryCSV()">Export Full History CSV</button>
-        <button class="btn" onclick="loadHistoryFromStorage()">Refresh</button>
-        <button class="btn danger" onclick="clearHistory()">Clear All History</button>
-      </div>
-      <div class="table-scroll" style="max-height: 30vh;">
-        <table>
-          <thead>
-            <tr>
-              <th class="left">Ticker</th>
-              <th>First Seen</th>
-              <th>Last Seen</th>
-              <th>Obs Count</th>
-              <th>Score Peak</th>
-              <th>Score Low</th>
-              <th>Score Last</th>
-              <th>Price Last</th>
-            </tr>
-          </thead>
-          <tbody id="histBody">
-            <tr><td colspan="8"><div class="empty-state"><div class="big">Empty</div>No historical observations yet</div></td></tr>
-          </tbody>
-        </table>
-      </div>
+  <div class="hdr-right">
+    <div class="pill"><span id="feedDot" class="dot-warn"></span> <strong id="feedLabel">—</strong></div>
+    <div class="pill">Active: <strong id="activeCount">0</strong></div>
+    <div class="pill">Refresh: <strong id="refreshLabel">—</strong>s</div>
+    <div class="pill">Next: <strong id="countdownLabel">—</strong>s</div>
+    <div class="pill">Last: <strong id="lastRefreshLabel">—</strong></div>
+    <div class="gear-btn" onclick="toggleSettings()" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </div>
   </div>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
+<!-- INPUT -->
+<div class="input-bar">
+  <textarea id="tickerInput" placeholder="Paste tickers: AAPL, NVDA, TSLA, SPY QQQ AMD..." rows="1"></textarea>
+  <button class="btn primary" onclick="addTickers()">Add to scan</button>
+  <button class="btn" onclick="pauseResume()"><span id="pauseLabel">Pause</span></button>
+  <button class="btn danger" onclick="clearActive()">Clear</button>
+</div>
+
+<!-- INFO -->
+<div class="info-box" id="infoBox">
+  <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Score formula &middot; Trading signals</div>
+  <div class="info-body">
+    <p><strong>Action dots:</strong> Solid green = all 6 criteria met (buy calls). Solid red = all 6 met (buy puts). Hollow = tracking. Dashed+faded = warming up (&lt;3 min, unreliable).</p>
+    <p style="margin-top:6px"><strong>The 6 criteria for "Candidate" status:</strong> Score &ge; threshold &middot; Direction arrow sustained (not flat) &middot; &Delta;Score positive &middot; Spread% &le; 5% &middot; OI &ge; 1,000 &middot; Rel Vol &ge; 2.0x</p>
+    <p style="margin-top:6px"><strong>Score components:</strong> <code>Volume Pressure</code> (30%) uptick/downtick proxy &middot; <code>Relative Volume</code> (20%) vs 20-day avg &middot; <code>Price vs EMA</code> (20%) ATR-normalized &middot; <code>Volatility Expansion</code> (15%) range vs ATR &middot; <code>Options Activity</code> (15%) spread + OI quality</p>
+    <p style="margin-top:6px"><strong>Sparkline:</strong> shows score trajectory over last ~5 min. Rising line = building momentum. Flat line = no conviction. Dashed = still warming up.</p>
+  </div>
+</div>
+
+<!-- MAIN TABLE -->
+<div class="tbl-panel">
+  <!-- Candidates section -->
+  <div class="sec-head" id="secCandHead">
+    <div class="sec-dot" style="background:var(--up)"></div>
+    <span class="sec-label" style="color:var(--text)">Candidates</span>
+    <span class="sec-sub" id="candCount">0 actionable</span>
+  </div>
+  <div class="tbl-scroll" id="tblScroll">
+    <!-- Header row -->
+    <div class="g-row g-hdr">
+      <div></div><div>Ticker</div><div class="r">Last</div><div class="r">%Chg</div>
+      <div class="r">Sprd%</div><div class="r">RVol</div><div class="r">Score</div>
+      <div class="c">Trend</div><div class="c">Dir</div><div class="r">&Delta;Scr</div><div class="r">Min</div>
+    </div>
+    <div id="candBody"></div>
+    <!-- Watching section -->
+    <div class="sec-head sec-divider" id="secWatchHead">
+      <div class="sec-dot-outline"></div>
+      <span class="sec-label" style="color:var(--text-dim)">Watching</span>
+      <span class="sec-sub" id="watchCount">0 tracking</span>
+    </div>
+    <div id="watchBody"></div>
+    <div id="emptyState" class="empty" style="display:none">
+      <div class="big">No active tickers</div>
+      Paste symbols above and click "Add to scan"
+    </div>
+  </div>
+  <div class="foot">
+    <div style="display:flex;gap:6px">
+      <button class="btn" onclick="exportActiveCSV()" style="font-size:10px;padding:3px 8px">Export CSV</button>
+    </div>
+    <span id="footStatus">Penny Pilot ON &middot; Spread max 15%</span>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="hist-panel collapsed" id="histPanel">
+  <div class="hist-head" onclick="toggleHistory()">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+      <span style="font-family:'Syne',sans-serif;font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--accent)">History Archive</span>
+    </div>
+    <span class="caret">&#x25BE;</span>
+  </div>
+  <div class="hist-body">
+    <div class="hist-stats" id="histStats"></div>
+    <div class="btn-row" style="margin-bottom:8px">
+      <button class="btn primary" onclick="exportHistoryCSV()" style="font-size:10px;padding:3px 8px">Export Full History CSV</button>
+      <button class="btn" onclick="loadHistoryFromStorage()" style="font-size:10px;padding:3px 8px">Refresh</button>
+      <button class="btn danger" onclick="clearHistory()" style="font-size:10px;padding:3px 8px">Clear All History</button>
+    </div>
+    <div class="hist-tbl-wrap">
+      <table class="hist-tbl">
+        <thead><tr>
+          <th style="text-align:left">Ticker</th><th>First Seen</th><th>Last Seen</th><th>Obs</th><th>Peak</th><th>Low</th><th>Last</th><th>Price</th>
+        </tr></thead>
+        <tbody id="histBody"><tr><td colspan="8"><div class="empty"><div class="big">Empty</div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- SETTINGS DRAWER -->
+<div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings()"></div>
+<div class="settings-drawer" id="settingsDrawer">
+  <div class="sd-head">
+    <span class="sd-title">Configuration</span>
+    <div class="sd-close" onclick="toggleSettings()">&times;</div>
+  </div>
+
+  <div class="sg">
+    <h4>Data Source</h4>
+    <div class="fld"><label>Feed</label><select id="feedSelect"><option value="tradier">Tradier</option><option value="schwab">Schwab</option></select></div>
+    <div class="fld"><label>Tradier API Key</label><input id="tradierKey" type="password" placeholder="Paste key..." autocomplete="off"/></div>
+    <div class="fld"><label>Tradier Environment</label><select id="tradierEnv"><option value="https://api.tradier.com/v1">Production</option><option value="https://sandbox.tradier.com/v1">Sandbox</option></select></div>
+    <div class="fld"><label>Schwab App Key</label><input id="schwabKey" type="password" placeholder="App Key..." autocomplete="off"/></div>
+    <div class="fld"><label>Schwab App Secret</label><input id="schwabSecret" type="password" placeholder="App Secret..." autocomplete="off"/></div>
+    <div class="fld"><label>Schwab Callback URL</label><input id="schwabCallback" type="text" placeholder="https://you.github.io/MomScanner/"/></div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveKeys()">Save Keys</button>
+      <button class="btn" onclick="connectSchwab()">Connect Schwab</button>
+      <button class="btn" onclick="testFeed()">Test Feed</button>
+    </div>
+  </div>
+
+  <div class="sg">
+    <h4>Options Liquidity Filter</h4>
+    <div class="fld"><label class="chk-row"><input type="checkbox" id="pennyPilotOnly"/><span>Penny Pilot only (<span id="ppCount">—</span> symbols)</span></label></div>
+    <div class="fld"><label>Max Options Spread %</label><div class="rng-row"><input type="range" min="3" max="50" id="maxSpreadPct" value="15"/><span class="rng-val" id="maxSpreadPctVal">15%</span></div></div>
+    <div class="fld"><label>Min ATM Open Interest</label><div class="rng-row"><input type="range" min="0" max="5000" step="100" id="minOptOI" value="500"/><span class="rng-val" id="minOptOIval">500</span></div></div>
+    <div class="fld"><label>Max DTE for Spread Check</label><div class="rng-row"><input type="range" min="0" max="30" id="maxDTE" value="14"/><span class="rng-val" id="maxDTEval">14d</span></div></div>
+    <div class="fld"><label>Options Check Interval</label><div class="rng-row"><input type="range" min="30" max="300" step="10" id="optInterval" value="60"/><span class="rng-val" id="optIntervalVal">60s</span></div></div>
+    <div class="btn-row"><button class="btn primary" onclick="saveOptionsFilter()">Save Options Filter</button></div>
+  </div>
+
+  <div class="sg">
+    <h4>Score Weights (sum=100)</h4>
+    <div class="w-row"><label>Volume Pressure</label><input type="range" min="0" max="60" id="wVP" value="30"/><span class="rng-val" id="wVPval">30</span></div>
+    <div class="w-row"><label>Relative Volume</label><input type="range" min="0" max="60" id="wRV" value="20"/><span class="rng-val" id="wRVval">20</span></div>
+    <div class="w-row"><label>Price vs EMA</label><input type="range" min="0" max="60" id="wPE" value="20"/><span class="rng-val" id="wPEval">20</span></div>
+    <div class="w-row"><label>Volatility Exp.</label><input type="range" min="0" max="60" id="wVE" value="15"/><span class="rng-val" id="wVEval">15</span></div>
+    <div class="w-row"><label>Options Activity</label><input type="range" min="0" max="60" id="wOA" value="15"/><span class="rng-val" id="wOAval">15</span></div>
+    <div class="w-sum" id="weightSum">Total: 100</div>
+  </div>
+
+  <div class="sg">
+    <h4>Behavior</h4>
+    <div class="fld"><label>Smoothing Lag (seconds)</label><div class="rng-row"><input type="range" min="10" max="180" id="smoothLag" value="60"/><span class="rng-val" id="smoothLagVal">60s</span></div></div>
+    <div class="fld"><label>Green Threshold (score &ge;)</label><div class="rng-row"><input type="range" min="50" max="95" id="highThresh" value="75"/><span class="rng-val" id="highThreshVal">75</span></div></div>
+    <div class="fld"><label>Red Threshold (score &le;)</label><div class="rng-row"><input type="range" min="5" max="50" id="lowThresh" value="25"/><span class="rng-val" id="lowThreshVal">25</span></div></div>
+    <div class="fld"><label>Min Refresh Seconds</label><div class="rng-row"><input type="range" min="3" max="30" id="minRefresh" value="5"/><span class="rng-val" id="minRefreshVal">5s</span></div></div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+      <button class="btn" onclick="resetSettings()">Reset Defaults</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-c" id="toastContainer"></div>
 
 <script>
-/* =====================================================================
-   MomScanner - Momentum Scoring Terminal
-   Single-file companion tool for thinkorswim filter results
-   ===================================================================== */
+const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'ms_schwab_key',schwabSecret:'ms_schwab_secret',schwabCallback:'ms_schwab_callback',schwabToken:'ms_schwab_token',feed:'ms_feed',weights:'ms_weights',behavior:'ms_behavior',optionsFilter:'ms_options_filter',history:'ms_history_v1',activeTickers:'ms_active_tickers'};
 
-// ---------- CONSTANTS ----------
-const LS_KEYS = {
-  tradier: 'ms_tradier_key',
-  tradierEnv: 'ms_tradier_env',
-  schwabKey: 'ms_schwab_key',
-  schwabSecret: 'ms_schwab_secret',
-  schwabCallback: 'ms_schwab_callback',
-  schwabToken: 'ms_schwab_token',
-  feed: 'ms_feed',
-  weights: 'ms_weights',
-  behavior: 'ms_behavior',
-  optionsFilter: 'ms_options_filter',
-  history: 'ms_history_v1',
-  activeTickers: 'ms_active_tickers'
-};
+const PENNY_PILOT=new Set(['AAPL','MSFT','AMZN','GOOGL','GOOG','META','NVDA','TSLA','NFLX','ADBE','CRM','ORCL','CSCO','INTC','AMD','QCOM','AVGO','TXN','MU','AMAT','LRCX','KLAC','ASML','ARM','SPY','QQQ','IWM','DIA','XLF','XLE','XLK','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','SMH','SOXX','SOXL','SOXS','TQQQ','SQQQ','UVXY','VXX','SVXY','TLT','TBT','GLD','SLV','USO','UNG','EEM','EFA','FXI','EWZ','INDA','HYG','JNK','LQD','AGG','VTI','VOO','VTV','VUG','ARKK','ARKQ','ARKW','ARKG','ARKF','MAGS','IBIT','FBTC','ETHA','SPXL','SPXS','TNA','TZA','LABU','LABD','FAS','FAZ','JPM','BAC','WFC','C','GS','MS','BRK.B','V','MA','AXP','PYPL','SQ','BLK','SCHW','COF','USB','PNC','TFC','MET','PRU','AIG','AFL','ALL','TRV','CB','COIN','HOOD','SOFI','AFRM','UPST','LMND','WMT','COST','TGT','HD','LOW','NKE','SBUX','MCD','CMG','DIS','LULU','ULTA','ROST','TJX','BBY','KSS','M','GPS','DKS','DG','DLTR','FL','ANF','AEO','BURL','GE','CAT','DE','BA','LMT','RTX','NOC','GD','HON','MMM','UPS','FDX','UNP','CSX','NSC','F','GM','RIVN','LCID','NIO','XPEV','LI','FSR','NKLA','CCL','RCL','NCLH','AAL','UAL','DAL','LUV','XOM','CVX','COP','OXY','SLB','HAL','EOG','PXD','MRO','DVN','APA','HES','FANG','PSX','VLO','MPC','JNJ','PFE','MRK','LLY','ABBV','BMY','GILD','AMGN','BIIB','REGN','VRTX','MRNA','BNTX','NVAX','PLUG','FCEL','SAVA','UNH','CVS','CI','HUM','ANTM','HCA','TMO','DHR','ABT','MDT','SYK','BSX','ISRG','ZTS','HOLX','IDXX','DXCM','PODD','IQV','T','VZ','TMUS','CHTR','CMCSA','DISH','PARA','WBD','FOX','FOXA','ROKU','SPOT','SHOP','EBAY','ETSY','PINS','SNAP','UBER','LYFT','ABNB','DASH','BKNG','EXPE','TRIP','DKNG','PENN','CZR','WYNN','MGM','LVS','RBLX','EA','TTWO','ATVI','U','DDOG','NET','SNOW','CRWD','ZS','PANW','FTNT','OKTA','PLTR','TEAM','MDB','DOCU','ZM','WORK','SPLK','TWLO','ESTC','CFLT','GTLB','AMT','PLD','CCI','EQIX','DLR','O','SPG','AVB','EQR','WELL','PSA','VICI','VTR','SBAC','SO','NEE','DUK','D','AEP','EXC','SRE','XEL','PCG','ED','EIX','PEG','WEC','ES','ETR','DTE','PPL','CMS','AES','AEE','FCX','NEM','GOLD','AA','X','CLF','MT','VALE','RIO','BHP','SCCO','STLD','NUE','CF','MOS','FMC','LIN','APD','SHW','ECL','PPG','DD','DOW','LYB','CE','ALB','WRB','BABA','JD','PDD','BIDU','NTES','TCOM','TME','VIPS','BILI','IQ','TAL','EDU','YMM','DIDI','BZ','ZH','MNSO','TIGR','FUTU','DQ','JKS','CSIQ','BEKE','GME','AMC','BBBY','BB','NOK','WISH','CLOV','WKHS','TLRY','CGC','ACB','SNDL','HEXO','APHA','CRON','MARA','RIOT','CLSK','HUT','BITF','BTBT','CAN','CIFR','WULF','APLD','HIVE','GREE','SMCI','VRT','POWL','BE','FLNC','STEM','CHPT','BLNK','EVGO','WKSP','GOEV','RIDE','HYLN','QS','MVIS','LAZR','VLDR','INVZ','OUST','IBM','HPQ','HPE','DELL','STX','WDC','NTAP','ANET','ZBRA','JNPR','MRVL','ADI','NXPI','ON','SWKS','QRVO','TER','ACLS','AEHR','RMBS','SITM','WOLF','CRDO','NVTS','IOT','SPT','BOX','DBX','HUBS','NOW','WDAY','INTU','ADP','PAYX','PAYC','CDAY','PCTY','FICO','FDS','MORN','MCO','SPGI','VRSK','BR','IT','ACN','CTSH','INFY','WIT','EPAM','GLOB','EXLS','FIS','FISV','GPN','WU','DFS','SYF','ALLY','CIT','NAVI','SLM','LEND']);
 
-/* Penny Pilot / "Penny Interval" whitelist.
-   These tickers trade in $0.01 increments on sub-$3 options and $0.05 above that,
-   vs default $0.05 / $0.10. This correlates ~perfectly with tight ATM spreads on
-   weekly/daily expirations. List maintained by Cboe; verify periodically. */
-const PENNY_PILOT = new Set([
-  // Mega-cap tech
-  'AAPL','MSFT','AMZN','GOOGL','GOOG','META','NVDA','TSLA','NFLX','ADBE','CRM','ORCL','CSCO','INTC','AMD','QCOM','AVGO','TXN','MU','AMAT','LRCX','KLAC','ASML','ARM',
-  // Major ETFs
-  'SPY','QQQ','IWM','DIA','XLF','XLE','XLK','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','SMH','SOXX','SOXL','SOXS','TQQQ','SQQQ','UVXY','VXX','SVXY','TLT','TBT','GLD','SLV','USO','UNG','EEM','EFA','FXI','EWZ','INDA','HYG','JNK','LQD','AGG','VTI','VOO','VTV','VUG','ARKK','ARKQ','ARKW','ARKG','ARKF','MAGS','IBIT','FBTC','ETHA','SPXL','SPXS','TNA','TZA','LABU','LABD','FAS','FAZ',
-  // Financials
-  'JPM','BAC','WFC','C','GS','MS','BRK.B','V','MA','AXP','PYPL','SQ','BLK','SCHW','COF','USB','PNC','TFC','MET','PRU','AIG','AFL','ALL','TRV','CB','COIN','HOOD','SOFI','AFRM','UPST','LMND',
-  // Consumer & retail
-  'WMT','COST','TGT','HD','LOW','NKE','SBUX','MCD','CMG','DIS','LULU','ULTA','ROST','TJX','BBY','KSS','M','GPS','DKS','DG','DLTR','FL','ANF','AEO','BURL',
-  // Industrials / energy / autos
-  'GE','CAT','DE','BA','LMT','RTX','NOC','GD','HON','MMM','UPS','FDX','UNP','CSX','NSC','F','GM','RIVN','LCID','NIO','XPEV','LI','FSR','NKLA','CCL','RCL','NCLH','AAL','UAL','DAL','LUV','XOM','CVX','COP','OXY','SLB','HAL','EOG','PXD','MRO','DVN','APA','HES','FANG','PSX','VLO','MPC',
-  // Pharma / biotech / healthcare
-  'JNJ','PFE','MRK','LLY','ABBV','BMY','GILD','AMGN','BIIB','REGN','VRTX','MRNA','BNTX','NVAX','PLUG','FCEL','SAVA','UNH','CVS','CI','HUM','ANTM','HCA','TMO','DHR','ABT','MDT','SYK','BSX','ISRG','ZTS','HOLX','IDXX','DXCM','PODD','IQV',
-  // Comm / media / internet
-  'T','VZ','TMUS','CHTR','CMCSA','DISH','PARA','WBD','FOX','FOXA','ROKU','SPOT','SHOP','EBAY','ETSY','PINS','SNAP','UBER','LYFT','ABNB','DASH','BKNG','EXPE','TRIP','DKNG','PENN','CZR','WYNN','MGM','LVS','RBLX','EA','TTWO','ATVI','U','DDOG','NET','SNOW','CRWD','ZS','PANW','FTNT','OKTA','PLTR','TEAM','MDB','DOCU','ZM','WORK','SPLK','TWLO','ESTC','CFLT','GTLB',
-  // REITs / utilities
-  'AMT','PLD','CCI','EQIX','DLR','O','SPG','AVB','EQR','WELL','PSA','VICI','VTR','SBAC','SO','NEE','DUK','D','AEP','EXC','SRE','XEL','PCG','ED','EIX','PEG','WEC','ES','ETR','DTE','PPL','CMS','AES','AEE',
-  // Materials / misc
-  'FCX','NEM','GOLD','AA','X','CLF','MT','VALE','RIO','BHP','SCCO','STLD','NUE','CF','MOS','FMC','LIN','APD','SHW','ECL','PPG','DD','DOW','LYB','CE','ALB','WRB',
-  // China ADRs / EM
-  'BABA','JD','PDD','BIDU','NTES','TCOM','TME','VIPS','NIO','LI','XPEV','BILI','IQ','TAL','EDU','YMM','DIDI','BZ','ZH','MNSO','TIGR','FUTU','DQ','JKS','CSIQ','BEKE',
-  // High-profile movers often in momentum scans
-  'GME','AMC','BBBY','BB','NOK','WISH','CLOV','WKHS','TLRY','CGC','ACB','SNDL','HEXO','APHA','CRON','TLRY','MARA','RIOT','CLSK','HUT','BITF','BTBT','CAN','CIFR','WULF','APLD','HIVE','GREE','SMCI','VRT','POWL','BE','FLNC','STEM','CHPT','BLNK','EVGO','WKSP','NKLA','GOEV','RIDE','HYLN','QS','MVIS','LAZR','VLDR','INVZ','OUST',
-  // Other frequently-traded names
-  'T','INTC','CSCO','IBM','HPQ','HPE','DELL','STX','WDC','NTAP','ANET','ZBRA','JNPR','NVDA','AVGO','MRVL','ADI','NXPI','ON','SWKS','QRVO','TER','ACLS','AEHR','RMBS','SITM','WOLF','CRDO','NVTS','IOT','ESTC','SPT','BOX','DBX','HUBS','NOW','WDAY','CRM','INTU','ADP','PAYX','PAYC','CDAY','PCTY','FICO','FDS','MORN','MCO','SPGI','VRSK','BR','IT','ACN','CTSH','INFY','WIT','EPAM','GLOB','EXLS','FIS','FISV','GPN','WU','MA','V','DFS','SYF','ALLY','CIT','NAVI','SLM','LEND'
-]);
+const state={active:new Map(),history:{},paused:false,countdown:0,refreshIntervalSec:5,schwabAccessToken:null,lastFeedStatus:'idle',priceHistory:new Map(),scoreHistory:new Map()};
 
-// ---------- STATE ----------
-const state = {
-  active: new Map(),       // ticker -> tickerData
-  history: {},             // ticker -> { firstSeen, lastSeen, obsCount, peak, low, last, priceLast }
-  paused: false,
-  countdown: 0,
-  refreshIntervalSec: 5,
-  schwabAccessToken: null,
-  lastFeedStatus: 'idle',
-  priceHistory: new Map(), // ticker -> [{t, price}]   rolling 120s for direction
-  volHistory: new Map(),   // ticker -> [{t, volume}]
-};
+function lsGet(k,d=null){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Storage error: '+e.message,'err')}}
+function qs(id){return document.getElementById(id)}
+function toast(m,kind='info',ms=3200){const c=qs('toastContainer'),t=document.createElement('div');t.className='toast '+(kind==='err'?'err':kind==='ok'?'ok':'');t.textContent=m;c.appendChild(t);setTimeout(()=>t.remove(),ms)}
+function fmtN(n,d=2){if(n==null||Number.isNaN(n))return'—';return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fmtP(n){if(n==null||Number.isNaN(n))return'—';return(n>=0?'+':'')+n.toFixed(2)+'%'}
+function fmtT(ms){if(!ms)return'—';return new Date(ms).toLocaleTimeString('en-US',{hour12:false})}
+function fmtDT(ms){if(!ms)return'—';return new Date(ms).toLocaleString('en-US',{hour12:false})}
+function clamp(x,lo=0,hi=100){return Math.max(lo,Math.min(hi,x))}
 
-// ---------- PERSISTENCE HELPERS ----------
-function lsGet(k, def=null) {
-  try { const v = localStorage.getItem(k); return v===null ? def : JSON.parse(v); }
-  catch(e) { return def; }
-}
-function lsSet(k, v) {
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { toast('Storage error: '+e.message, 'err'); }
-}
+// ---- SETTINGS ----
+function toggleSettings(){qs('settingsOverlay').classList.toggle('open');qs('settingsDrawer').classList.toggle('open')}
+function toggleHistory(){qs('histPanel').classList.toggle('collapsed')}
 
-// ---------- UI HELPERS ----------
-function qs(id) { return document.getElementById(id); }
-function toast(msg, kind='info', ms=3200) {
-  const c = qs('toastContainer');
-  const t = document.createElement('div');
-  t.className = 'toast ' + (kind==='err' ? 'err' : kind==='ok' ? 'ok' : '');
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(() => t.remove(), ms);
-}
-function fmtNum(n, dec=2) {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—';
-  return n.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
-}
-function fmtPct(n, dec=2) {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—';
-  const sign = n >= 0 ? '+' : '';
-  return sign + n.toFixed(dec) + '%';
-}
-function fmtTime(ms) {
-  if (!ms) return '—';
-  const d = new Date(ms);
-  return d.toLocaleTimeString('en-US', { hour12: false });
-}
-function fmtDateTime(ms) {
-  if (!ms) return '—';
-  const d = new Date(ms);
-  return d.toLocaleString('en-US', { hour12: false });
-}
+function saveKeys(){lsSet(LS_KEYS.tradier,qs('tradierKey').value.trim());lsSet(LS_KEYS.tradierEnv,qs('tradierEnv').value);lsSet(LS_KEYS.schwabKey,qs('schwabKey').value.trim());lsSet(LS_KEYS.schwabSecret,qs('schwabSecret').value.trim());lsSet(LS_KEYS.schwabCallback,qs('schwabCallback').value.trim());lsSet(LS_KEYS.feed,qs('feedSelect').value);toast('Keys saved','ok');updateFeedPill()}
+function loadKeys(){qs('tradierKey').value=lsGet(LS_KEYS.tradier,'')||'';qs('tradierEnv').value=lsGet(LS_KEYS.tradierEnv,'https://api.tradier.com/v1')||'https://api.tradier.com/v1';qs('schwabKey').value=lsGet(LS_KEYS.schwabKey,'')||'';qs('schwabSecret').value=lsGet(LS_KEYS.schwabSecret,'')||'';qs('schwabCallback').value=lsGet(LS_KEYS.schwabCallback,'')||(location.origin+location.pathname);qs('feedSelect').value=lsGet(LS_KEYS.feed,'tradier')||'tradier';const t=lsGet(LS_KEYS.schwabToken,null);if(t&&t.access_token)state.schwabAccessToken=t.access_token}
 
-// ---------- SETTINGS PANEL ----------
-function toggleSettings() { qs('settings').classList.toggle('collapsed'); }
-function toggleHistory() { qs('history').classList.toggle('collapsed'); }
+function saveSettings(){lsSet(LS_KEYS.weights,{VP:+qs('wVP').value,RV:+qs('wRV').value,PE:+qs('wPE').value,VE:+qs('wVE').value,OA:+qs('wOA').value});lsSet(LS_KEYS.behavior,{smoothLag:+qs('smoothLag').value,highThresh:+qs('highThresh').value,lowThresh:+qs('lowThresh').value,minRefresh:+qs('minRefresh').value});toast('Settings saved','ok')}
+function loadSettings(){const w=lsGet(LS_KEYS.weights,{VP:30,RV:20,PE:20,VE:15,OA:15}),b=lsGet(LS_KEYS.behavior,{smoothLag:60,highThresh:75,lowThresh:25,minRefresh:5});qs('wVP').value=w.VP;qs('wRV').value=w.RV;qs('wPE').value=w.PE;qs('wVE').value=w.VE;qs('wOA').value=w.OA;qs('smoothLag').value=b.smoothLag;qs('highThresh').value=b.highThresh;qs('lowThresh').value=b.lowThresh;qs('minRefresh').value=b.minRefresh;refreshWeightLabels();refreshBehaviorLabels()}
+function resetSettings(){qs('wVP').value=30;qs('wRV').value=20;qs('wPE').value=20;qs('wVE').value=15;qs('wOA').value=15;qs('smoothLag').value=60;qs('highThresh').value=75;qs('lowThresh').value=25;qs('minRefresh').value=5;refreshWeightLabels();refreshBehaviorLabels();saveSettings()}
+function refreshWeightLabels(){['VP','RV','PE','VE','OA'].forEach(k=>qs('w'+k+'val').textContent=qs('w'+k).value);const s=['VP','RV','PE','VE','OA'].reduce((a,k)=>a+ +qs('w'+k).value,0);const el=qs('weightSum');el.textContent='Total: '+s+(s===100?' ✓':' (normalized)');el.classList.toggle('bad',s===0)}
+function refreshBehaviorLabels(){qs('smoothLagVal').textContent=qs('smoothLag').value+'s';qs('highThreshVal').textContent=qs('highThresh').value;qs('lowThreshVal').textContent=qs('lowThresh').value;qs('minRefreshVal').textContent=qs('minRefresh').value+'s'}
+function getWeights(){const w=lsGet(LS_KEYS.weights,{VP:30,RV:20,PE:20,VE:15,OA:15}),s=w.VP+w.RV+w.PE+w.VE+w.OA;if(s===0)return{VP:.2,RV:.2,PE:.2,VE:.2,OA:.2};return{VP:w.VP/s,RV:w.RV/s,PE:w.PE/s,VE:w.VE/s,OA:w.OA/s}}
+function getBehavior(){return lsGet(LS_KEYS.behavior,{smoothLag:60,highThresh:75,lowThresh:25,minRefresh:5})}
 
-function saveKeys() {
-  lsSet(LS_KEYS.tradier, qs('tradierKey').value.trim());
-  lsSet(LS_KEYS.tradierEnv, qs('tradierEnv').value);
-  lsSet(LS_KEYS.schwabKey, qs('schwabKey').value.trim());
-  lsSet(LS_KEYS.schwabSecret, qs('schwabSecret').value.trim());
-  lsSet(LS_KEYS.schwabCallback, qs('schwabCallback').value.trim());
-  lsSet(LS_KEYS.feed, qs('feedSelect').value);
-  toast('API keys saved to browser storage', 'ok');
-  updateFeedPill();
-}
-function loadKeys() {
-  qs('tradierKey').value = lsGet(LS_KEYS.tradier, '') || '';
-  qs('tradierEnv').value = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1') || 'https://api.tradier.com/v1';
-  qs('schwabKey').value = lsGet(LS_KEYS.schwabKey, '') || '';
-  qs('schwabSecret').value = lsGet(LS_KEYS.schwabSecret, '') || '';
-  qs('schwabCallback').value = lsGet(LS_KEYS.schwabCallback, '') || (window.location.origin + window.location.pathname);
-  qs('feedSelect').value = lsGet(LS_KEYS.feed, 'tradier') || 'tradier';
-  const tok = lsGet(LS_KEYS.schwabToken, null);
-  if (tok && tok.access_token) state.schwabAccessToken = tok.access_token;
-}
+function saveOptionsFilter(){lsSet(LS_KEYS.optionsFilter,{pennyPilotOnly:qs('pennyPilotOnly').checked,maxSpreadPct:+qs('maxSpreadPct').value,minOptOI:+qs('minOptOI').value,maxDTE:+qs('maxDTE').value,optInterval:+qs('optInterval').value});toast('Options filter saved','ok');render()}
+function loadOptionsFilter(){const o=lsGet(LS_KEYS.optionsFilter,{pennyPilotOnly:true,maxSpreadPct:15,minOptOI:500,maxDTE:14,optInterval:60});qs('pennyPilotOnly').checked=o.pennyPilotOnly!==false;qs('maxSpreadPct').value=o.maxSpreadPct??15;qs('minOptOI').value=o.minOptOI??500;qs('maxDTE').value=o.maxDTE??14;qs('optInterval').value=o.optInterval??60;qs('ppCount').textContent=PENNY_PILOT.size;refreshOptionsFilterLabels()}
+function refreshOptionsFilterLabels(){qs('maxSpreadPctVal').textContent=qs('maxSpreadPct').value+'%';qs('minOptOIval').textContent=qs('minOptOI').value;qs('maxDTEval').textContent=qs('maxDTE').value+'d';qs('optIntervalVal').textContent=qs('optInterval').value+'s'}
+function getOptionsFilter(){return lsGet(LS_KEYS.optionsFilter,{pennyPilotOnly:true,maxSpreadPct:15,minOptOI:500,maxDTE:14,optInterval:60})}
 
-function saveSettings() {
-  const weights = {
-    VP: +qs('wVP').value, RV: +qs('wRV').value, PE: +qs('wPE').value,
-    VE: +qs('wVE').value, OA: +qs('wOA').value
-  };
-  const behavior = {
-    smoothLag: +qs('smoothLag').value,
-    highThresh: +qs('highThresh').value,
-    lowThresh: +qs('lowThresh').value,
-    minRefresh: +qs('minRefresh').value
-  };
-  lsSet(LS_KEYS.weights, weights);
-  lsSet(LS_KEYS.behavior, behavior);
-  toast('Settings saved', 'ok');
-}
-function loadSettings() {
-  const w = lsGet(LS_KEYS.weights, { VP:30, RV:20, PE:20, VE:15, OA:15 });
-  const b = lsGet(LS_KEYS.behavior, { smoothLag:60, highThresh:75, lowThresh:25, minRefresh:5 });
-  qs('wVP').value = w.VP; qs('wRV').value = w.RV; qs('wPE').value = w.PE;
-  qs('wVE').value = w.VE; qs('wOA').value = w.OA;
-  qs('smoothLag').value = b.smoothLag; qs('highThresh').value = b.highThresh;
-  qs('lowThresh').value = b.lowThresh; qs('minRefresh').value = b.minRefresh;
-  refreshWeightLabels(); refreshBehaviorLabels();
-}
-function resetSettings() {
-  qs('wVP').value = 30; qs('wRV').value = 20; qs('wPE').value = 20;
-  qs('wVE').value = 15; qs('wOA').value = 15;
-  qs('smoothLag').value = 60; qs('highThresh').value = 75;
-  qs('lowThresh').value = 25; qs('minRefresh').value = 5;
-  refreshWeightLabels(); refreshBehaviorLabels();
-  saveSettings();
-}
-function refreshWeightLabels() {
-  ['VP','RV','PE','VE','OA'].forEach(k => qs('w'+k+'val').textContent = qs('w'+k).value);
-  const sum = ['VP','RV','PE','VE','OA'].reduce((a,k)=>a+ +qs('w'+k).value, 0);
-  const el = qs('weightSum');
-  el.textContent = 'Total: ' + sum + (sum===100 ? ' ✓' : ' (will be normalized)');
-  el.classList.toggle('bad', sum===0);
-}
-function refreshBehaviorLabels() {
-  qs('smoothLagVal').textContent = qs('smoothLag').value + 's';
-  qs('highThreshVal').textContent = qs('highThresh').value;
-  qs('lowThreshVal').textContent = qs('lowThresh').value;
-  qs('minRefreshVal').textContent = qs('minRefresh').value + 's';
-}
-['VP','RV','PE','VE','OA'].forEach(k => {
-  // attach after DOM ready below
-});
+function updateFeedPill(){const f=qs('feedSelect').value,dot=qs('feedDot'),lbl=qs('feedLabel');dot.className=state.lastFeedStatus==='ok'?'dot-live':state.lastFeedStatus==='err'?'dot-err':'dot-warn';lbl.textContent=f==='tradier'?'Tradier L2':(state.schwabAccessToken?'Schwab':'Schwab (no token)')}
 
-function getWeights() {
-  const w = lsGet(LS_KEYS.weights, { VP:30, RV:20, PE:20, VE:15, OA:15 });
-  const sum = w.VP + w.RV + w.PE + w.VE + w.OA;
-  if (sum === 0) return { VP:0.2, RV:0.2, PE:0.2, VE:0.2, OA:0.2 };
-  return { VP: w.VP/sum, RV: w.RV/sum, PE: w.PE/sum, VE: w.VE/sum, OA: w.OA/sum };
-}
-function getBehavior() {
-  return lsGet(LS_KEYS.behavior, { smoothLag:60, highThresh:75, lowThresh:25, minRefresh:5 });
-}
+// ---- TICKER MGMT ----
+function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50}}}
 
-function saveOptionsFilter() {
-  const of = {
-    pennyPilotOnly: qs('pennyPilotOnly').checked,
-    maxSpreadPct: +qs('maxSpreadPct').value,
-    minOptOI: +qs('minOptOI').value,
-    maxDTE: +qs('maxDTE').value,
-    optInterval: +qs('optInterval').value
-  };
-  lsSet(LS_KEYS.optionsFilter, of);
-  toast('Options filter saved', 'ok');
-  render();
-}
-function loadOptionsFilter() {
-  const of = lsGet(LS_KEYS.optionsFilter, {
-    pennyPilotOnly: true, maxSpreadPct: 15, minOptOI: 500, maxDTE: 14, optInterval: 60
-  });
-  qs('pennyPilotOnly').checked = of.pennyPilotOnly !== false;
-  qs('maxSpreadPct').value = of.maxSpreadPct ?? 15;
-  qs('minOptOI').value = of.minOptOI ?? 500;
-  qs('maxDTE').value = of.maxDTE ?? 14;
-  qs('optInterval').value = of.optInterval ?? 60;
-  qs('ppCount').textContent = PENNY_PILOT.size;
-  refreshOptionsFilterLabels();
-}
-function refreshOptionsFilterLabels() {
-  qs('maxSpreadPctVal').textContent = qs('maxSpreadPct').value + '%';
-  qs('minOptOIval').textContent = qs('minOptOI').value;
-  qs('maxDTEval').textContent = qs('maxDTE').value + 'd';
-  qs('optIntervalVal').textContent = qs('optInterval').value + 's';
-}
-function getOptionsFilter() {
-  return lsGet(LS_KEYS.optionsFilter, {
-    pennyPilotOnly: true, maxSpreadPct: 15, minOptOI: 500, maxDTE: 14, optInterval: 60
-  });
-}
+function addTickers(){const raw=qs('tickerInput').value,parts=raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));if(!parts.length){toast('No valid tickers','err');return}const of=getOptionsFilter();let added=0,rejected=0;const now=Date.now(),rejList=[];parts.forEach(t=>{if(of.pennyPilotOnly&&!PENNY_PILOT.has(t)){rejected++;rejList.push(t);return}if(!state.active.has(t)){state.active.set(t,makeTicker(t,now));state.priceHistory.set(t,[]);state.scoreHistory.set(t,[]);added++}});qs('tickerInput').value='';saveActiveTickers();render();let msg=`Added ${added} ticker${added!==1?'s':''}`;if(rejected)msg+=` · ${rejected} rejected (non-Penny-Pilot: ${rejList.slice(0,4).join(', ')}${rejList.length>4?'…':''})`;toast(msg,rejected>added?'err':'ok',4500)}
 
-// ---------- FEED STATUS ----------
-function updateFeedPill() {
-  const feed = qs('feedSelect').value;
-  const dot = qs('feedDot');
-  const label = qs('feedLabel');
-  dot.classList.remove('live','err','warn');
-  if (state.lastFeedStatus === 'ok') dot.classList.add('live');
-  else if (state.lastFeedStatus === 'err') dot.classList.add('err');
-  else dot.classList.add('warn');
-  label.textContent = feed === 'tradier' ? 'Tradier L1' : (state.schwabAccessToken ? 'Schwab' : 'Schwab (not connected)');
-}
+function clearActive(){if(!confirm('Clear active scan? History is preserved.'))return;state.active.clear();state.priceHistory.clear();state.scoreHistory.clear();saveActiveTickers();render();toast('Active cleared','ok')}
+function saveActiveTickers(){lsSet(LS_KEYS.activeTickers,Array.from(state.active.keys()))}
+function restoreActiveTickers(){const arr=lsGet(LS_KEYS.activeTickers,[])||[];const now=Date.now();arr.forEach(t=>{if(!state.active.has(t)){state.active.set(t,makeTicker(t,now));state.priceHistory.set(t,[]);state.scoreHistory.set(t,[])}})}
 
-// ---------- TICKER MANAGEMENT ----------
-function addTickers() {
-  const raw = qs('tickerInput').value;
-  const parts = raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));
-  if (parts.length === 0) { toast('No valid tickers found', 'err'); return; }
-  const of = getOptionsFilter();
-  let added = 0, rejected = 0;
-  const now = Date.now();
-  const rejectedList = [];
-  parts.forEach(t => {
-    if (of.pennyPilotOnly && !PENNY_PILOT.has(t)) {
-      rejected++;
-      rejectedList.push(t);
-      return;
-    }
-    if (!state.active.has(t)) {
-      state.active.set(t, {
-        ticker: t,
-        firstSeen: now,
-        lastSeen: null,
-        last: null, prevClose: null, pctChg: null,
-        pmPrice: null, ahPrice: null,
-        volume: null, avgVol20: null, relVol: null,
-        bid: null, ask: null, atr: null, ema9: null,
-        optOI: null, optSpread: null, optSpreadPct: null,
-        optLastChecked: 0, optBid: null, optAsk: null, optMid: null, optDTE: null,
-        rawScore: 50,
-        smoothScore: 50,
-        firstSeenScore: null,
-        direction30s: 0,
-        arrow: 'flat',
-        components: { VP:50, RV:50, PE:50, VE:50, OA:50 }
-      });
-      state.priceHistory.set(t, []);
-      state.volHistory.set(t, []);
-      added++;
-    }
-  });
-  qs('tickerInput').value = '';
-  saveActiveTickers();
-  render();
-  let msg = `Added ${added} ticker${added!==1?'s':''}`;
-  if (rejected > 0) msg += ` · Rejected ${rejected} non-Penny-Pilot (${rejectedList.slice(0,5).join(', ')}${rejectedList.length>5?'...':''})`;
-  if (parts.length - added - rejected > 0) msg += ` · ${parts.length-added-rejected} duplicate${(parts.length-added-rejected)!==1?'s':''} skipped`;
-  toast(msg, rejected > added ? 'err' : 'ok', 5000);
+// ---- SCORING ----
+function computeRawScore(d){
+  let vp=50;if(d.bid&&d.ask&&d.last){const mid=(d.bid+d.ask)/2,sp=d.ask-d.bid;if(sp>0){const pos=(d.last-d.bid)/sp;vp=50+(pos-.5)*100}vp=.6*vp+.4*(50+d.direction30s*5);vp=clamp(vp)}
+  let rv=50;if(d.relVol!=null&&d.relVol>0)rv=clamp(50+25*Math.log2(d.relVol));
+  let pe=50;if(d.last&&d.ema9&&d.atr&&d.atr>0){pe=clamp(50+((d.last-d.ema9)/d.atr)*20)}else if(d.pctChg!=null)pe=clamp(50+d.pctChg*5);
+  let ve=50;if(d.atr&&d.atr>0&&d.last&&d.pctChg!=null){const tr=Math.abs(d.pctChg/100)*d.last;ve=clamp(50+(tr/d.atr-.5)*60)}
+  let oa=50;if(d.optOI&&d.optOI>0&&d.optSpreadPct!=null){const ss=100-Math.min(100,d.optSpreadPct*4),os=clamp(50+15*Math.log2(Math.max(.1,d.optOI/500)));oa=clamp(.6*ss+.4*os)}
+  d.components={VP:vp,RV:rv,PE:pe,VE:ve,OA:oa};const w=getWeights();return clamp(vp*w.VP+rv*w.RV+pe*w.PE+ve*w.VE+oa*w.OA)
 }
+function applySmoothing(d,raw){const b=getBehavior(),tau=Math.max(5,b.smoothLag),dt=state.refreshIntervalSec,alpha=1-Math.exp(-dt/tau);d.smoothScore+=alpha*(raw-d.smoothScore);d.rawScore=raw;if(d.firstSeenScore===null&&d.lastSeen!==null)d.firstSeenScore=d.smoothScore}
+function updateDirection(d,ticker){const hist=state.priceHistory.get(ticker)||[],now=Date.now();if(d.last!=null)hist.push({t:now,price:d.last});const cut=now-30000;while(hist.length&&hist[0].t<cut)hist.shift();state.priceHistory.set(ticker,hist);if(hist.length<2){d.direction30s=0;d.arrow='flat';return}let sum=0,cnt=0;for(let i=1;i<hist.length;i++){sum+=Math.sign(hist[i].price-hist[i-1].price);cnt++}const avg=cnt?sum/cnt:0;d.direction30s=avg;d.arrow=avg>.15?'up':avg<-.15?'down':'flat'}
 
-function clearActive() {
-  if (!confirm('Clear active scan? History archive will NOT be affected.')) return;
-  state.active.clear();
-  state.priceHistory.clear();
-  state.volHistory.clear();
-  saveActiveTickers();
-  render();
-  toast('Active scan cleared', 'ok');
-}
+// ---- SPARKLINE ----
+function recordScorePoint(d,ticker){const hist=state.scoreHistory.get(ticker)||[];hist.push({t:Date.now(),s:d.smoothScore});const cut=Date.now()-5*60000;while(hist.length&&hist[0].t<cut)hist.shift();state.scoreHistory.set(ticker,hist)}
 
-function saveActiveTickers() {
-  lsSet(LS_KEYS.activeTickers, Array.from(state.active.keys()));
-}
-function restoreActiveTickers() {
-  const arr = lsGet(LS_KEYS.activeTickers, []) || [];
-  const now = Date.now();
-  arr.forEach(t => {
-    if (!state.active.has(t)) {
-      state.active.set(t, {
-        ticker: t, firstSeen: now, lastSeen: null,
-        last:null, prevClose:null, pctChg:null, pmPrice:null, ahPrice:null,
-        volume:null, avgVol20:null, relVol:null, bid:null, ask:null, atr:null, ema9:null,
-        optOI:null, optSpread:null, optSpreadPct:null,
-        optLastChecked:0, optBid:null, optAsk:null, optMid:null, optDTE:null,
-        rawScore:50, smoothScore:50, firstSeenScore:null,
-        direction30s:0, arrow:'flat',
-        components: { VP:50, RV:50, PE:50, VE:50, OA:50 }
-      });
-      state.priceHistory.set(t, []);
-      state.volHistory.set(t, []);
-    }
-  });
-}
-
-// ---------- SCORING ----------
-function clamp(x, lo=0, hi=100) { return Math.max(lo, Math.min(hi, x)); }
-
-function computeRawScore(d) {
-  // VP: Volume Pressure (uptick/downtick proxy using last vs mid)
-  let vpScore = 50;
-  if (d.bid && d.ask && d.last) {
-    const mid = (d.bid + d.ask) / 2;
-    const spread = d.ask - d.bid;
-    if (spread > 0) {
-      const pos = (d.last - d.bid) / spread; // 0 at bid, 1 at ask
-      vpScore = 50 + (pos - 0.5) * 100;      // 0 at bid, 100 at ask
-    }
-    // blend with recent direction tick trend
-    vpScore = 0.6 * vpScore + 0.4 * (50 + d.direction30s * 5);
-    vpScore = clamp(vpScore);
+function renderSparkline(ticker,arrow){
+  const hist=state.scoreHistory.get(ticker)||[];
+  if(hist.length<2){
+    const warmup=hist.length>0;
+    const col=arrow==='up'?'var(--up)':arrow==='down'?'var(--down)':'var(--neutral)';
+    if(warmup)return`<svg width="72" height="18" viewBox="0 0 72 18"><line x1="0" y1="9" x2="36" y2="9" stroke="${col}" stroke-width="1.5" stroke-dasharray="3,3"/></svg>`;
+    return`<svg width="72" height="18" viewBox="0 0 72 18"><line x1="0" y1="9" x2="72" y2="9" stroke="var(--neutral)" stroke-width="1" stroke-dasharray="2,4" opacity=".4"/></svg>`;
   }
-  // RV: Relative Volume (log-scaled around 1.0x)
-  let rvScore = 50;
-  if (d.relVol !== null && d.relVol !== undefined && d.relVol > 0) {
-    // relVol 1.0 -> 50; 3.0 -> ~85; 0.3 -> ~15
-    rvScore = clamp(50 + 25 * Math.log2(d.relVol));
-  }
-  // PE: Price vs EMA, normalized by ATR
-  let peScore = 50;
-  if (d.last && d.ema9 && d.atr && d.atr > 0) {
-    const dev = (d.last - d.ema9) / d.atr; // in ATR units
-    peScore = clamp(50 + dev * 20);        // ±2.5 ATR -> extremes
-  } else if (d.pctChg !== null) {
-    peScore = clamp(50 + d.pctChg * 5);
-  }
-  // VE: Volatility Expansion (current range vs ATR)
-  let veScore = 50;
-  if (d.atr && d.atr > 0 && d.last && d.pctChg !== null) {
-    const todayRange = Math.abs(d.pctChg / 100) * d.last;
-    const ratio = todayRange / d.atr;
-    veScore = clamp(50 + (ratio - 0.5) * 60);
-  }
-  // OA: Options Activity - now uses real chain data when available
-  let oaScore = 50;
-  if (d.optOI && d.optOI > 0 && d.optSpreadPct !== null && d.optSpreadPct !== undefined) {
-    // Tight spread + high OI = smart money is trading = higher conviction signal
-    // 1% spread with 5000 OI -> ~85
-    // 10% spread with 500 OI -> ~40
-    // 30% spread with 100 OI -> ~15
-    const spreadScore = 100 - Math.min(100, d.optSpreadPct * 4); // 0% spread -> 100, 25% -> 0
-    const oiScore = clamp(50 + 15 * Math.log2(Math.max(0.1, d.optOI / 500))); // 500 OI -> 50, 2000 -> ~80
-    oaScore = clamp(0.6 * spreadScore + 0.4 * oiScore);
-  }
-  d.components = { VP:vpScore, RV:rvScore, PE:peScore, VE:veScore, OA:oaScore };
-  const w = getWeights();
-  const raw = vpScore*w.VP + rvScore*w.RV + peScore*w.PE + veScore*w.VE + oaScore*w.OA;
-  return clamp(raw);
+  const pts=hist.slice(-20);
+  let mn=Infinity,mx=-Infinity;pts.forEach(p=>{mn=Math.min(mn,p.s);mx=Math.max(mx,p.s)});
+  const rng=Math.max(mx-mn,5);
+  const coords=pts.map((p,i)=>{const x=(i/(pts.length-1))*72;const y=18-((p.s-mn)/rng)*16-1;return`${x.toFixed(1)},${y.toFixed(1)}`}).join(' ');
+  const col=arrow==='up'?'var(--up)':arrow==='down'?'var(--down)':'var(--neutral)';
+  const last=coords.split(' ').pop();
+  const dash=hist.length<6?'stroke-dasharray="3,3"':'';
+  return`<svg width="72" height="18" viewBox="0 0 72 18"><polyline points="${coords}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" ${dash}/><circle cx="${last.split(',')[0]}" cy="${last.split(',')[1]}" r="2" fill="${col}"/></svg>`;
 }
 
-function applySmoothing(d, rawScore) {
-  const b = getBehavior();
-  // EMA-style smoothing: alpha chosen so that the score reaches ~63% of a step change after smoothLag seconds.
-  // Approximate: alpha = 1 - exp(-dt / tau), where tau = smoothLag, dt = refreshInterval
-  const tau = Math.max(5, b.smoothLag);
-  const dt = state.refreshIntervalSec;
-  const alpha = 1 - Math.exp(-dt / tau);
-  d.smoothScore = d.smoothScore + alpha * (rawScore - d.smoothScore);
-  d.rawScore = rawScore;
-  if (d.firstSeenScore === null && d.lastSeen !== null) {
-    d.firstSeenScore = d.smoothScore;
-  }
+// ---- DATA FETCH ----
+async function fetchTradierQuotes(tickers){const key=lsGet(LS_KEYS.tradier,''),base=lsGet(LS_KEYS.tradierEnv,'https://api.tradier.com/v1');if(!key)throw new Error('Tradier API key not set');const r=await fetch(`${base}/markets/quotes?symbols=${encodeURIComponent(tickers.join(','))}&greeks=false`,{headers:{'Authorization':'Bearer '+key,'Accept':'application/json'}});if(!r.ok)throw new Error('Tradier HTTP '+r.status);const j=await r.json(),q=j?.quotes?.quote;if(!q)return[];const a=Array.isArray(q)?q:[q];return a.map(q=>({symbol:q.symbol,last:q.last??q.close,bid:q.bid,ask:q.ask,volume:q.volume,avgVol:q.average_volume,prevClose:q.prevclose,pctChg:q.change_percentage,high:q.high,low:q.low,open:q.open}))}
+
+async function fetchSchwabQuotes(tickers){if(!state.schwabAccessToken)throw new Error('Schwab not connected');const r=await fetch(`https://api.schwabapi.com/marketdata/v1/quotes?symbols=${encodeURIComponent(tickers.join(','))}&fields=quote,reference`,{headers:{'Authorization':'Bearer '+state.schwabAccessToken,'Accept':'application/json'}});if(r.status===401){state.schwabAccessToken=null;throw new Error('Schwab token expired')}if(!r.ok)throw new Error('Schwab HTTP '+r.status);const j=await r.json(),res=[];for(const s in j){const q=j[s].quote||{};res.push({symbol:s,last:q.lastPrice,bid:q.bidPrice,ask:q.askPrice,volume:q.totalVolume,avgVol:null,prevClose:q.closePrice,pctChg:q.netPercentChange,high:q.highPrice,low:q.lowPrice,open:q.openPrice})}return res}
+
+async function testFeed(){try{toast('Testing feed...');const f=qs('feedSelect').value,data=f==='tradier'?await fetchTradierQuotes(['SPY','QQQ']):await fetchSchwabQuotes(['SPY','QQQ']);if(data&&data.length){toast(`Feed OK · ${data.length} quotes · SPY=${data[0]?.last??'—'}`,'ok');state.lastFeedStatus='ok'}else{toast('No data','err');state.lastFeedStatus='err'}}catch(e){toast('Feed error: '+e.message,'err');state.lastFeedStatus='err'}updateFeedPill()}
+
+// ---- OPTIONS CHAIN ----
+async function fetchTradierExpirations(ticker){const key=lsGet(LS_KEYS.tradier,''),base=lsGet(LS_KEYS.tradierEnv,'https://api.tradier.com/v1');const r=await fetch(`${base}/markets/options/expirations?symbol=${encodeURIComponent(ticker)}&includeAllRoots=true&strikes=false`,{headers:{'Authorization':'Bearer '+key,'Accept':'application/json'}});if(!r.ok)throw new Error('exp HTTP '+r.status);const j=await r.json(),d=j?.expirations?.date;if(!d)return[];return Array.isArray(d)?d:[d]}
+
+async function fetchTradierChain(ticker,exp){const key=lsGet(LS_KEYS.tradier,''),base=lsGet(LS_KEYS.tradierEnv,'https://api.tradier.com/v1');const r=await fetch(`${base}/markets/options/chains?symbol=${encodeURIComponent(ticker)}&expiration=${encodeURIComponent(exp)}&greeks=false`,{headers:{'Authorization':'Bearer '+key,'Accept':'application/json'}});if(!r.ok)throw new Error('chain HTTP '+r.status);const j=await r.json(),o=j?.options?.option;if(!o)return[];return Array.isArray(o)?o:[o]}
+
+function daysUntil(ds){const[y,m,d]=ds.split('-').map(Number);return Math.max(0,Math.round((Date.UTC(y,m-1,d)-Date.now())/864e5))}
+
+async function checkOptionsSpread(ticker,spot,maxDTE){if(!spot)throw new Error('no spot');const exps=await fetchTradierExpirations(ticker);if(!exps.length)return null;let chosen=null;for(const e of exps){const dte=daysUntil(e);if(dte<=maxDTE){chosen={exp:e,dte};break}}if(!chosen)chosen={exp:exps[0],dte:daysUntil(exps[0])};const chain=await fetchTradierChain(ticker,chosen.exp);if(!chain.length)return null;let atmStrike=null,minDiff=Infinity;chain.forEach(o=>{const d=Math.abs(o.strike-spot);if(d<minDiff){minDiff=d;atmStrike=o.strike}});const cATM=chain.find(o=>o.strike===atmStrike&&o.option_type==='call'),pATM=chain.find(o=>o.strike===atmStrike&&o.option_type==='put');function si(o){if(!o||!o.bid||!o.ask||o.ask<=0)return null;const m=(o.bid+o.ask)/2;if(m<=0)return null;return{bid:o.bid,ask:o.ask,mid:m,spread:o.ask-o.bid,spreadPct:((o.ask-o.bid)/m)*100,oi:o.open_interest||0}}const ci=si(cATM),pi=si(pATM);let best=null;if(ci&&pi)best=ci.spreadPct<=pi.spreadPct?ci:pi;else best=ci||pi;if(!best)return null;return{strike:atmStrike,expiration:chosen.exp,dte:chosen.dte,bid:best.bid,ask:best.ask,mid:best.mid,spread:best.spread,spreadPct:best.spreadPct,oi:Math.max(ci?.oi||0,pi?.oi||0)}}
+
+async function optionsSweep(){const of=getOptionsFilter(),now=Date.now(),staleMs=of.optInterval*1000;let target=null,oldest=Infinity;state.active.forEach(d=>{if(!d.last)return;const age=now-(d.optLastChecked||0);if(age>=staleMs&&(d.optLastChecked||0)<oldest){target=d;oldest=d.optLastChecked||0}});if(!target)return;target.optLastChecked=now;try{const r=await checkOptionsSpread(target.ticker,target.last,of.maxDTE);if(r){target.optBid=r.bid;target.optAsk=r.ask;target.optMid=r.mid;target.optSpread=r.spread;target.optSpreadPct=r.spreadPct;target.optOI=r.oi;target.optDTE=r.dte}}catch(e){console.warn('opt check fail',target.ticker,e.message)}}
+
+// ---- SCHWAB OAUTH ----
+function connectSchwab(){const k=qs('schwabKey').value.trim(),cb=qs('schwabCallback').value.trim();if(!k||!cb){toast('Set Schwab Key + Callback first','err');return}location.href=`https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=${encodeURIComponent(k)}&redirect_uri=${encodeURIComponent(cb)}`}
+async function handleSchwabCallback(){const p=new URLSearchParams(location.search),code=p.get('code');if(!code)return;const k=lsGet(LS_KEYS.schwabKey,''),s=lsGet(LS_KEYS.schwabSecret,''),cb=lsGet(LS_KEYS.schwabCallback,'');if(!k||!s){toast('Missing Schwab creds','err');return}try{const r=await fetch('https://api.schwabapi.com/v1/oauth/token',{method:'POST',headers:{'Authorization':'Basic '+btoa(k+':'+s),'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`});if(!r.ok)throw new Error('Token HTTP '+r.status);const t=await r.json();lsSet(LS_KEYS.schwabToken,t);state.schwabAccessToken=t.access_token;history.replaceState({},document.title,cb);toast('Schwab connected','ok');updateFeedPill()}catch(e){toast('Schwab OAuth failed: '+e.message,'err')}}
+
+// ---- POLL LOOP ----
+async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateDirection(d,t);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d)});state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
+
+// ---- HISTORY ----
+function recordHistory(d){const h=state.history[d.ticker]||{ticker:d.ticker,firstSeen:d.firstSeen,lastSeen:d.lastSeen,obsCount:0,peak:d.smoothScore,low:d.smoothScore,last:d.smoothScore,priceLast:d.last};h.lastSeen=d.lastSeen;h.obsCount++;h.peak=Math.max(h.peak,d.smoothScore);h.low=Math.min(h.low,d.smoothScore);h.last=d.smoothScore;h.priceLast=d.last;state.history[d.ticker]=h;if(h.obsCount%5===0)lsSet(LS_KEYS.history,state.history)}
+function loadHistoryFromStorage(){state.history=lsGet(LS_KEYS.history,{})||{};renderHistory();toast('History loaded','ok')}
+function clearHistory(){if(!confirm('Clear ENTIRE history? Cannot undo.'))return;state.history={};lsSet(LS_KEYS.history,{});renderHistory();toast('History cleared','ok')}
+
+// ---- CSV ----
+function csvE(v){if(v==null)return'';const s=String(v);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+function dlCSV(name,rows){const csv=rows.map(r=>r.map(csvE).join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function exportActiveCSV(){const rows=[['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','OptBid','OptAsk','OptSpreadPct','OptOI','OptDTE','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','FirstSeen','LastSeen','MinutesSeen']],now=Date.now();state.active.forEach(d=>{rows.push([d.ticker,d.last,d.pctChg,d.volume,d.relVol,d.bid,d.ask,d.optBid,d.optAsk,d.optSpreadPct?.toFixed(2),d.optOI,d.optDTE,d.rawScore?.toFixed(2),d.smoothScore?.toFixed(2),d.firstSeenScore?.toFixed(2),(d.rawScore-(d.firstSeenScore??d.rawScore)).toFixed(2),d.arrow,new Date(d.firstSeen).toISOString(),d.lastSeen?new Date(d.lastSeen).toISOString():'',((now-d.firstSeen)/6e4).toFixed(1)])});dlCSV('momscanner_active_'+Date.now()+'.csv',rows)}
+function exportHistoryCSV(){const rows=[['Ticker','FirstSeen','LastSeen','ObsCount','PeakScore','LowScore','LastScore','PriceLast']];Object.values(state.history).forEach(h=>{rows.push([h.ticker,new Date(h.firstSeen).toISOString(),h.lastSeen?new Date(h.lastSeen).toISOString():'',h.obsCount,h.peak?.toFixed(2),h.low?.toFixed(2),h.last?.toFixed(2),h.priceLast])});dlCSV('momscanner_history_'+Date.now()+'.csv',rows)}
+
+// ---- CANDIDATE CLASSIFICATION ----
+function classifyTicker(d){
+  const b=getBehavior(),minSeen=(Date.now()-d.firstSeen)/60000;
+  if(minSeen<3)return'warmup';
+  const score=d.smoothScore??50,delta=(d.firstSeenScore!=null)?d.rawScore-d.firstSeenScore:0;
+  const spreadOK=d.optSpreadPct!=null?d.optSpreadPct<=5:false;
+  const oiOK=d.optOI!=null?d.optOI>=1000:false;
+  const rvolOK=d.relVol!=null?d.relVol>=2:false;
+  const dirOK=d.arrow!=='flat';
+  const deltaOK=delta>0;
+  const scoreOK=score>=b.highThresh;
+  if(scoreOK&&dirOK&&deltaOK&&spreadOK&&oiOK&&rvolOK)return d.arrow==='up'?'bull':'bear';
+  return'watch';
 }
 
-function updateDirection(d, ticker) {
-  const hist = state.priceHistory.get(ticker) || [];
-  const now = Date.now();
-  if (d.last !== null && d.last !== undefined) {
-    hist.push({ t: now, price: d.last });
-  }
-  // keep only last 30s
-  const cutoff = now - 30_000;
-  while (hist.length && hist[0].t < cutoff) hist.shift();
-  state.priceHistory.set(ticker, hist);
-  if (hist.length < 2) { d.direction30s = 0; d.arrow = 'flat'; return; }
-  // sum of signed price changes
-  let sum = 0, count = 0;
-  for (let i=1; i<hist.length; i++) {
-    const dp = hist[i].price - hist[i-1].price;
-    sum += Math.sign(dp);
-    count++;
-  }
-  const avg = count ? sum / count : 0;
-  d.direction30s = avg;
-  if (avg > 0.15) d.arrow = 'up';
-  else if (avg < -0.15) d.arrow = 'down';
-  else d.arrow = 'flat';
+function scoreColor(s){if(s>=75)return'var(--up)';if(s>=60)return'#7fd99a';if(s>=40)return'var(--accent)';if(s>=25)return'#ff9e6e';return'var(--down)'}
+
+// ---- RENDER ----
+function render(){renderActive();renderHistory();updateFooterStatus()}
+
+function renderActive(){
+  const of=getOptionsFilter(),allArr=Array.from(state.active.values());
+  qs('activeCount').textContent=allArr.length;
+  // filter hidden
+  const visible=allArr.filter(d=>{if(d.optSpreadPct!=null&&d.optSpreadPct>of.maxSpreadPct)return false;if(d.optOI!=null&&d.optOI>0&&d.optOI<of.minOptOI)return false;return true});
+  const hidden=allArr.length-visible.length;
+  // classify
+  const candidates=[],watching=[];
+  visible.forEach(d=>{const c=classifyTicker(d);d._class=c;if(c==='bull'||c==='bear')candidates.push(d);else watching.push(d)});
+  // sort each group
+  const sorter=(a,b)=>{const ds=(b.smoothScore??0)-(a.smoothScore??0);if(Math.abs(ds)>.01)return ds;return(a.optSpreadPct??999)-(b.optSpreadPct??999)};
+  candidates.sort(sorter);watching.sort(sorter);
+  // empty state
+  if(allArr.length===0){qs('candBody').innerHTML='';qs('watchBody').innerHTML='';qs('emptyState').style.display='block';qs('secCandHead').style.display='none';qs('secWatchHead').style.display='none';return}
+  qs('emptyState').style.display='none';qs('secCandHead').style.display='flex';qs('secWatchHead').style.display='flex';
+  qs('candCount').textContent=`${candidates.length} actionable`;
+  qs('watchCount').textContent=`${watching.length} tracking${hidden?' · '+hidden+' hidden':''}`;
+  qs('candBody').innerHTML=candidates.length?candidates.map(d=>renderRow(d)).join(''):'<div style="padding:12px 14px;color:var(--text-faint);font-size:11px">No candidates yet — waiting for scores to qualify</div>';
+  qs('watchBody').innerHTML=watching.length?watching.map(d=>renderRow(d)).join(''):'';
 }
 
-// ---------- DATA FETCH ----------
-async function fetchTradierQuotes(tickers) {
-  const key = lsGet(LS_KEYS.tradier, '');
-  const base = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1');
-  if (!key) throw new Error('Tradier API key not set');
-  const url = `${base}/markets/quotes?symbols=${encodeURIComponent(tickers.join(','))}&greeks=false`;
-  const res = await fetch(url, {
-    headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
-  });
-  if (!res.ok) throw new Error('Tradier HTTP ' + res.status);
-  const json = await res.json();
-  const quotes = json?.quotes?.quote;
-  if (!quotes) return [];
-  const arr = Array.isArray(quotes) ? quotes : [quotes];
-  return arr.map(q => ({
-    symbol: q.symbol,
-    last: q.last ?? q.close,
-    bid: q.bid,
-    ask: q.ask,
-    volume: q.volume,
-    avgVol: q.average_volume,
-    prevClose: q.prevclose,
-    pctChg: q.change_percentage,
-    high: q.high,
-    low: q.low,
-    open: q.open
-  }));
+function renderRow(d){
+  const now=Date.now(),score=d.smoothScore??50,scoreInt=Math.round(score);
+  const delta=(d.firstSeenScore!=null)?d.rawScore-d.firstSeenScore:0;
+  const minSeen=((now-d.firstSeen)/6e4).toFixed(1);
+  const cls=d._class;
+  const rowCls=cls==='bull'?'row-bull':cls==='bear'?'row-bear':cls==='warmup'?'row-fade':'';
+  const pctCls=(d.pctChg??0)>0?'c-up':(d.pctChg??0)<0?'c-down':'c-dim';
+  const deltaCls=delta>.5?'c-up':delta<-.5?'c-down':'c-faint';
+  // action dot
+  let dotCls=cls==='bull'?'act act-bull':cls==='bear'?'act act-bear':cls==='warmup'?'act act-dashed':'act act-outline';
+  // spread pill
+  let spreadHTML='<span class="c-faint">—</span>';
+  if(d.optSpreadPct!=null){const sp=d.optSpreadPct;const c=sp<=5?'sp-g':sp<=15?'sp-w':'sp-b';spreadHTML=`<span class="spill ${c}" title="ATM ${d.optDTE}DTE · ${d.optBid?.toFixed(2)}/${d.optAsk?.toFixed(2)}">${sp.toFixed(1)}%</span>`}
+  // rel vol
+  const rvolHTML=d.relVol!=null?`${fmtN(d.relVol,1)}x`:'—';
+  const rvolCls=d.relVol!=null?(d.relVol>=2?'':'c-dim'):'c-faint';
+  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}"></span></div><div class="tkr">${d.ticker}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div><div class="r"><div class="score-bar"><div class="score-fill" style="width:${score}%;background:${scoreColor(score)}"></div><div class="score-txt">${scoreInt}</div></div></div><div class="c">${renderSparkline(d.ticker,d.arrow)}</div><div class="c"><span class="arr ${d.arrow==='up'?'arr-up':d.arrow==='down'?'arr-down':'arr-flat'}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></div><div class="r ${deltaCls}">${delta>=0?'+':''}${delta.toFixed(1)}</div><div class="r c-faint">${minSeen}</div></div>`
 }
 
-/* ---------- OPTIONS CHAIN FETCH (Tradier) ---------- */
+function renderHistory(){const entries=Object.values(state.history),tbody=qs('histBody'),stats=qs('histStats');const total=entries.length,obs=entries.reduce((a,h)=>a+h.obsCount,0),peak=entries.reduce((a,h)=>Math.max(a,h.peak||0),0),hi=entries.filter(h=>(h.peak||0)>=75).length;stats.innerHTML=`<div class="stat-tile"><div class="slbl">Tickers</div><div class="sval accent">${total}</div></div><div class="stat-tile"><div class="slbl">Observations</div><div class="sval">${obs.toLocaleString()}</div></div><div class="stat-tile"><div class="slbl">Peak Score</div><div class="sval">${peak.toFixed(1)}</div></div><div class="stat-tile"><div class="slbl">Hit ≥ 75</div><div class="sval accent">${hi}</div></div>`;if(!entries.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="big">Empty</div></div></td></tr>';return}entries.sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));tbody.innerHTML=entries.slice(0,500).map(h=>`<tr><td style="text-align:left"><span class="tkr">${h.ticker}</span></td><td class="c-faint">${fmtDT(h.firstSeen)}</td><td class="c-faint">${fmtDT(h.lastSeen)}</td><td>${h.obsCount}</td><td class="c-up">${h.peak?.toFixed(1)??'—'}</td><td class="c-down">${h.low?.toFixed(1)??'—'}</td><td>${h.last?.toFixed(1)??'—'}</td><td>${fmtN(h.priceLast)}</td></tr>`).join('')}
 
-async function fetchTradierExpirations(ticker) {
-  const key = lsGet(LS_KEYS.tradier, '');
-  const base = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1');
-  const url = `${base}/markets/options/expirations?symbol=${encodeURIComponent(ticker)}&includeAllRoots=true&strikes=false`;
-  const res = await fetch(url, {
-    headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
-  });
-  if (!res.ok) throw new Error('expirations HTTP ' + res.status);
-  const json = await res.json();
-  const dates = json?.expirations?.date;
-  if (!dates) return [];
-  return Array.isArray(dates) ? dates : [dates];
-}
+function updateFooterStatus(){const of=getOptionsFilter();qs('footStatus').textContent=`${of.pennyPilotOnly?'Penny Pilot ON':'Penny Pilot OFF'} · Spread max ${of.maxSpreadPct}% · OI min ${of.minOptOI} · Last: ${fmtT(Date.now())}`}
 
-async function fetchTradierChain(ticker, expiration) {
-  const key = lsGet(LS_KEYS.tradier, '');
-  const base = lsGet(LS_KEYS.tradierEnv, 'https://api.tradier.com/v1');
-  const url = `${base}/markets/options/chains?symbol=${encodeURIComponent(ticker)}&expiration=${encodeURIComponent(expiration)}&greeks=false`;
-  const res = await fetch(url, {
-    headers: { 'Authorization': 'Bearer ' + key, 'Accept': 'application/json' }
-  });
-  if (!res.ok) throw new Error('chain HTTP ' + res.status);
-  const json = await res.json();
-  const opts = json?.options?.option;
-  if (!opts) return [];
-  return Array.isArray(opts) ? opts : [opts];
-}
+// ---- REFRESH ----
+function computeRefreshInterval(){const b=getBehavior(),n=state.active.size;return Math.max(b.minRefresh,Math.ceil(n/20))}
+function pauseResume(){state.paused=!state.paused;qs('pauseLabel').textContent=state.paused?'Resume':'Pause';toast(state.paused?'Paused':'Resumed','ok')}
 
-function daysUntil(dateStr) {
-  const [y,m,d] = dateStr.split('-').map(Number);
-  const target = Date.UTC(y, m-1, d);
-  const now = Date.now();
-  return Math.max(0, Math.round((target - now) / 86400000));
-}
+// ---- CLOCK ----
+let lastPollAt=0,lastOptSweepAt=0;
+function tickClock(){const now=Date.now();state.refreshIntervalSec=computeRefreshInterval();qs('refreshLabel').textContent=state.refreshIntervalSec;const elapsed=Math.floor((now-lastPollAt)/1000),remaining=Math.max(0,state.refreshIntervalSec-elapsed);qs('countdownLabel').textContent=remaining;if(state.active.size>0)renderActive();if(!state.paused&&elapsed>=state.refreshIntervalSec&&state.active.size>0){lastPollAt=now;pollOnce()}if(!state.paused&&(now-lastOptSweepAt)>=3000&&state.active.size>0){const f=qs('feedSelect').value;if(f==='tradier'){lastOptSweepAt=now;optionsSweep()}}}
 
-/* Pick the best expiration: first one within maxDTE; if none, use the nearest overall.
-   Find the ATM strike (closest to spot), compute spread from the TIGHTER of call/put. */
-async function checkOptionsSpread(ticker, spot, maxDTE) {
-  if (!spot) throw new Error('no spot price');
-  const exps = await fetchTradierExpirations(ticker);
-  if (exps.length === 0) return null;
-  // pick nearest expiration within maxDTE, else nearest overall
-  let chosen = null;
-  for (const e of exps) {
-    const dte = daysUntil(e);
-    if (dte <= maxDTE) { chosen = { exp: e, dte }; break; }
-  }
-  if (!chosen) {
-    chosen = { exp: exps[0], dte: daysUntil(exps[0]) };
-  }
-  const chain = await fetchTradierChain(ticker, chosen.exp);
-  if (chain.length === 0) return null;
-  // find ATM strike
-  let atmStrike = null, minDiff = Infinity;
-  chain.forEach(opt => {
-    const diff = Math.abs(opt.strike - spot);
-    if (diff < minDiff) { minDiff = diff; atmStrike = opt.strike; }
-  });
-  const callATM = chain.find(o => o.strike === atmStrike && o.option_type === 'call');
-  const putATM  = chain.find(o => o.strike === atmStrike && o.option_type === 'put');
-  // compute spread % from whichever side is tighter
-  function sprInfo(opt) {
-    if (!opt || !opt.bid || !opt.ask || opt.ask <= 0) return null;
-    const mid = (opt.bid + opt.ask) / 2;
-    if (mid <= 0) return null;
-    return {
-      bid: opt.bid, ask: opt.ask, mid,
-      spread: opt.ask - opt.bid,
-      spreadPct: ((opt.ask - opt.bid) / mid) * 100,
-      oi: opt.open_interest || 0,
-      vol: opt.volume || 0
-    };
-  }
-  const callInfo = sprInfo(callATM);
-  const putInfo = sprInfo(putATM);
-  // pick the tighter (more liquid) side
-  let chosenSide = null;
-  if (callInfo && putInfo) {
-    chosenSide = callInfo.spreadPct <= putInfo.spreadPct ? callInfo : putInfo;
-  } else {
-    chosenSide = callInfo || putInfo;
-  }
-  if (!chosenSide) return null;
-  // use MAX OI between call and put ATM as representative liquidity
-  const maxOI = Math.max(callInfo?.oi || 0, putInfo?.oi || 0);
-  return {
-    strike: atmStrike,
-    expiration: chosen.exp,
-    dte: chosen.dte,
-    bid: chosenSide.bid,
-    ask: chosenSide.ask,
-    mid: chosenSide.mid,
-    spread: chosenSide.spread,
-    spreadPct: chosenSide.spreadPct,
-    oi: maxOI
-  };
-}
-
-/* Background sweep: walks active tickers, checks options spread for any stale one.
-   Rate limited — one ticker per interval tick. Spreads change slowly so this is plenty. */
-async function optionsSweep() {
-  const of = getOptionsFilter();
-  const now = Date.now();
-  const staleMs = of.optInterval * 1000;
-  // find oldest un-checked ticker
-  let target = null, oldest = Infinity;
-  state.active.forEach(d => {
-    if (!d.last) return; // need spot price first
-    const age = now - (d.optLastChecked || 0);
-    if (age >= staleMs && (d.optLastChecked || 0) < oldest) {
-      target = d; oldest = d.optLastChecked || 0;
-    }
-  });
-  if (!target) return;
-  target.optLastChecked = now; // mark attempted so we don't hammer errors
-  try {
-    const result = await checkOptionsSpread(target.ticker, target.last, of.maxDTE);
-    if (result) {
-      target.optBid = result.bid;
-      target.optAsk = result.ask;
-      target.optMid = result.mid;
-      target.optSpread = result.spread;
-      target.optSpreadPct = result.spreadPct;
-      target.optOI = result.oi;
-      target.optDTE = result.dte;
-    }
-  } catch(e) {
-    // silent fail per ticker; sweep continues
-    console.warn('options check failed for', target.ticker, e.message);
-  }
-  renderActive();
-}
-
-async function fetchSchwabQuotes(tickers) {
-  if (!state.schwabAccessToken) throw new Error('Schwab not connected (OAuth needed)');
-  const url = `https://api.schwabapi.com/marketdata/v1/quotes?symbols=${encodeURIComponent(tickers.join(','))}&fields=quote,reference`;
-  const res = await fetch(url, {
-    headers: { 'Authorization': 'Bearer ' + state.schwabAccessToken, 'Accept': 'application/json' }
-  });
-  if (res.status === 401) {
-    state.schwabAccessToken = null;
-    throw new Error('Schwab token expired - reconnect');
-  }
-  if (!res.ok) throw new Error('Schwab HTTP ' + res.status);
-  const json = await res.json();
-  const results = [];
-  for (const sym in json) {
-    const q = json[sym].quote || {};
-    results.push({
-      symbol: sym,
-      last: q.lastPrice,
-      bid: q.bidPrice,
-      ask: q.askPrice,
-      volume: q.totalVolume,
-      avgVol: null,
-      prevClose: q.closePrice,
-      pctChg: q.netPercentChange,
-      high: q.highPrice,
-      low: q.lowPrice,
-      open: q.openPrice
-    });
-  }
-  return results;
-}
-
-async function testFeed() {
-  try {
-    const feed = qs('feedSelect').value;
-    toast('Testing feed...', 'info');
-    const probe = ['SPY','QQQ'];
-    const data = feed === 'tradier' ? await fetchTradierQuotes(probe) : await fetchSchwabQuotes(probe);
-    if (data && data.length) {
-      toast(`Feed OK · got ${data.length} quote${data.length!==1?'s':''} · SPY=${data[0]?.last ?? '—'}`, 'ok');
-      state.lastFeedStatus = 'ok';
-    } else {
-      toast('Feed returned no data', 'err');
-      state.lastFeedStatus = 'err';
-    }
-  } catch(e) {
-    toast('Feed test failed: ' + e.message, 'err');
-    state.lastFeedStatus = 'err';
-  }
-  updateFeedPill();
-}
-
-// ---------- SCHWAB OAUTH ----------
-function connectSchwab() {
-  const key = qs('schwabKey').value.trim();
-  const cb = qs('schwabCallback').value.trim();
-  if (!key || !cb) { toast('Set Schwab App Key and Callback URL first', 'err'); return; }
-  const authUrl = `https://api.schwabapi.com/v1/oauth/authorize?response_type=code&client_id=${encodeURIComponent(key)}&redirect_uri=${encodeURIComponent(cb)}`;
-  window.location.href = authUrl;
-}
-
-async function handleSchwabCallback() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  if (!code) return;
-  const key = lsGet(LS_KEYS.schwabKey, '');
-  const secret = lsGet(LS_KEYS.schwabSecret, '');
-  const cb = lsGet(LS_KEYS.schwabCallback, '');
-  if (!key || !secret) { toast('Missing Schwab credentials', 'err'); return; }
-  const creds = btoa(key + ':' + secret);
-  try {
-    const res = await fetch('https://api.schwabapi.com/v1/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + creds,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`
-    });
-    if (!res.ok) throw new Error('Token exchange HTTP ' + res.status);
-    const tok = await res.json();
-    lsSet(LS_KEYS.schwabToken, tok);
-    state.schwabAccessToken = tok.access_token;
-    // clean URL
-    window.history.replaceState({}, document.title, cb);
-    toast('Schwab connected', 'ok');
-    updateFeedPill();
-  } catch(e) {
-    toast('Schwab OAuth failed: ' + e.message, 'err');
-  }
-}
-
-// ---------- MAIN POLL LOOP ----------
-async function pollOnce() {
-  if (state.paused) return;
-  const tickers = Array.from(state.active.keys());
-  if (tickers.length === 0) return;
-  const feed = qs('feedSelect').value;
-  try {
-    // chunk to avoid URL length issues
-    const chunks = [];
-    for (let i=0; i<tickers.length; i+=40) chunks.push(tickers.slice(i, i+40));
-    let all = [];
-    for (const c of chunks) {
-      const d = feed === 'tradier' ? await fetchTradierQuotes(c) : await fetchSchwabQuotes(c);
-      all = all.concat(d);
-    }
-    const now = Date.now();
-    all.forEach(q => {
-      const t = q.symbol;
-      const d = state.active.get(t);
-      if (!d) return;
-      d.last = q.last;
-      d.bid = q.bid;
-      d.ask = q.ask;
-      d.volume = q.volume;
-      d.avgVol20 = q.avgVol;
-      d.prevClose = q.prevClose;
-      d.pctChg = (typeof q.pctChg === 'number') ? q.pctChg : (q.pctChg != null ? parseFloat(q.pctChg) : null);
-      d.lastSeen = now;
-      if (d.avgVol20 && d.volume) d.relVol = d.volume / d.avgVol20;
-      // Approximate ATR and EMA9 from available data (not perfect without history API, but gives reasonable shape)
-      // If high/low available, use daily range as a rough ATR proxy
-      if (q.high && q.low) d.atr = Math.max(d.atr || 0, q.high - q.low);
-      if (d.ema9 === null || d.ema9 === undefined) d.ema9 = d.last;
-      else d.ema9 = d.ema9 * 0.8 + d.last * 0.2; // rolling approximation
-      // direction + score
-      updateDirection(d, t);
-      const raw = computeRawScore(d);
-      // first smoothing initialization
-      if (d.smoothScore === 50 && d.firstSeenScore === null) d.smoothScore = raw;
-      applySmoothing(d, raw);
-      if (d.firstSeenScore === null) d.firstSeenScore = d.smoothScore;
-      // record to history
-      recordHistory(d);
-    });
-    state.lastFeedStatus = 'ok';
-    qs('lastRefreshLabel').textContent = fmtTime(now);
-  } catch(e) {
-    state.lastFeedStatus = 'err';
-    toast('Feed error: ' + e.message, 'err', 4000);
-  }
-  updateFeedPill();
-  render();
-}
-
-// ---------- HISTORY ----------
-function recordHistory(d) {
-  const h = state.history[d.ticker] || {
-    ticker: d.ticker,
-    firstSeen: d.firstSeen,
-    lastSeen: d.lastSeen,
-    obsCount: 0,
-    peak: d.smoothScore,
-    low: d.smoothScore,
-    last: d.smoothScore,
-    priceLast: d.last
-  };
-  h.lastSeen = d.lastSeen;
-  h.obsCount++;
-  h.peak = Math.max(h.peak, d.smoothScore);
-  h.low = Math.min(h.low, d.smoothScore);
-  h.last = d.smoothScore;
-  h.priceLast = d.last;
-  state.history[d.ticker] = h;
-  // persist periodically
-  if (h.obsCount % 5 === 0) lsSet(LS_KEYS.history, state.history);
-}
-function loadHistoryFromStorage() {
-  state.history = lsGet(LS_KEYS.history, {}) || {};
-  renderHistory();
-  toast('History loaded', 'ok');
-}
-function clearHistory() {
-  if (!confirm('Clear ENTIRE history archive? This cannot be undone.')) return;
-  state.history = {};
-  lsSet(LS_KEYS.history, {});
-  renderHistory();
-  toast('History cleared', 'ok');
-}
-
-// ---------- CSV EXPORT ----------
-function csvEscape(v) {
-  if (v === null || v === undefined) return '';
-  const s = String(v);
-  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
-  return s;
-}
-function downloadCSV(name, rows) {
-  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-function exportActiveCSV() {
-  const rows = [['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','OptBid','OptAsk','OptSpreadPct','OptOI','OptDTE','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','FirstSeen','LastSeen','MinutesSeen']];
-  const now = Date.now();
-  state.active.forEach(d => {
-    rows.push([
-      d.ticker, d.last, d.pctChg, d.volume, d.relVol, d.bid, d.ask,
-      d.optBid, d.optAsk, d.optSpreadPct?.toFixed(2), d.optOI, d.optDTE,
-      d.rawScore?.toFixed(2), d.smoothScore?.toFixed(2), d.firstSeenScore?.toFixed(2),
-      (d.rawScore - (d.firstSeenScore ?? d.rawScore)).toFixed(2),
-      d.arrow, new Date(d.firstSeen).toISOString(),
-      d.lastSeen ? new Date(d.lastSeen).toISOString() : '',
-      ((now - d.firstSeen)/60000).toFixed(1)
-    ]);
-  });
-  downloadCSV('momscanner_active_' + Date.now() + '.csv', rows);
-}
-function exportHistoryCSV() {
-  const rows = [['Ticker','FirstSeen','LastSeen','ObsCount','PeakScore','LowScore','LastScore','PriceLast']];
-  Object.values(state.history).forEach(h => {
-    rows.push([
-      h.ticker,
-      new Date(h.firstSeen).toISOString(),
-      h.lastSeen ? new Date(h.lastSeen).toISOString() : '',
-      h.obsCount,
-      h.peak?.toFixed(2),
-      h.low?.toFixed(2),
-      h.last?.toFixed(2),
-      h.priceLast
-    ]);
-  });
-  downloadCSV('momscanner_history_' + Date.now() + '.csv', rows);
-}
-
-// ---------- RENDER ----------
-function render() {
-  renderActive();
-  renderHistory();
-}
-
-function optionsLiquidityGrade(d) {
-  // Without options API calls, grade by proxy: bid/ask tightness + volume
-  if (!d.bid || !d.ask || !d.last) return 'unk';
-  const spreadPct = (d.ask - d.bid) / d.last;
-  const v = d.volume || 0;
-  if (spreadPct < 0.001 && v > 5_000_000) return 'A';
-  if (spreadPct < 0.003 && v > 1_000_000) return 'B';
-  if (spreadPct < 0.008 && v > 250_000) return 'C';
-  return 'D';
-}
-
-function scoreColor(score) {
-  if (score >= 75) return 'var(--up)';
-  if (score >= 60) return '#7fd99a';
-  if (score >= 40) return 'var(--accent)';
-  if (score >= 25) return '#ff9e6e';
-  return 'var(--down)';
-}
-
-function renderActive() {
-  const b = getBehavior();
-  const of = getOptionsFilter();
-  const tbody = qs('tbody');
-  const allArr = Array.from(state.active.values());
-  qs('activeCount').textContent = allArr.length;
-
-  // Auto-hide: drop tickers where we HAVE options data and it fails the thresholds.
-  // Tickers without options data yet are shown (we can't filter what we don't know).
-  const arr = allArr.filter(d => {
-    if (d.optSpreadPct !== null && d.optSpreadPct !== undefined) {
-      if (d.optSpreadPct > of.maxSpreadPct) return false;
-    }
-    if (d.optOI !== null && d.optOI !== undefined && d.optOI > 0) {
-      if (d.optOI < of.minOptOI) return false;
-    }
-    return true;
-  });
-  const hiddenCount = allArr.length - arr.length;
-  qs('tblCount').textContent = hiddenCount > 0
-    ? `${arr.length} (+${hiddenCount} hidden)`
-    : arr.length;
-
-  if (arr.length === 0) {
-    const msg = allArr.length === 0
-      ? '<div class="empty-state"><div class="big">No active tickers</div>Paste symbols above and click "Add to Scan"</div>'
-      : '<div class="empty-state"><div class="big">All tickers hidden</div>All active tickers failed the options liquidity filter. Relax thresholds in Configuration or add different tickers.</div>';
-    tbody.innerHTML = `<tr><td colspan="14">${msg}</td></tr>`;
-    return;
-  }
-  // sort: smoothScore desc, then options spread (tighter first), then stock liquidity grade
-  const gradeRank = { A:0, B:1, C:2, D:3, unk:4 };
-  arr.sort((a,b) => {
-    const ds = (b.smoothScore ?? 0) - (a.smoothScore ?? 0);
-    if (Math.abs(ds) > 0.01) return ds;
-    // Tiebreaker 1: tighter options spread wins
-    const sa = a.optSpreadPct ?? 999;
-    const sb = b.optSpreadPct ?? 999;
-    if (Math.abs(sa - sb) > 0.1) return sa - sb;
-    // Tiebreaker 2: stock liquidity grade
-    return (gradeRank[optionsLiquidityGrade(a)] ?? 9) - (gradeRank[optionsLiquidityGrade(b)] ?? 9);
-  });
-  const now = Date.now();
-  const rows = arr.map(d => {
-    const grade = optionsLiquidityGrade(d);
-    const score = d.smoothScore ?? 50;
-    const scoreInt = Math.round(score);
-    const delta = (d.firstSeenScore !== null && d.firstSeenScore !== undefined)
-      ? d.rawScore - d.firstSeenScore : 0;
-    const deltaClass = delta > 0.5 ? 'up' : delta < -0.5 ? 'down' : 'flat';
-    const minSeen = ((now - d.firstSeen) / 60000).toFixed(1);
-    const rowCls = score >= b.highThresh ? 'score-high' : score <= b.lowThresh ? 'score-low' : '';
-    const pctClass = (d.pctChg ?? 0) > 0 ? 'up-txt' : (d.pctChg ?? 0) < 0 ? 'down-txt' : 'dim-txt';
-    // spread cell
-    let spreadCell = '<span class="faint-txt">—</span>';
-    if (d.optSpreadPct !== null && d.optSpreadPct !== undefined) {
-      const sp = d.optSpreadPct;
-      const cls = sp <= 5 ? 'up-txt' : sp <= 15 ? 'dim-txt' : 'down-txt';
-      const bgColor = sp <= 5 ? 'var(--up-soft)' : sp <= 15 ? 'var(--accent-soft)' : 'var(--down-soft)';
-      spreadCell = `<span style="padding:2px 6px;border-radius:2px;background:${bgColor};font-weight:600;" class="${cls}" title="ATM strike ${d.optDTE}DTE · bid ${d.optBid?.toFixed(2)} / ask ${d.optAsk?.toFixed(2)}">${sp.toFixed(1)}%</span>`;
-    }
-    // OI cell
-    let oiCell = '<span class="faint-txt">—</span>';
-    if (d.optOI !== null && d.optOI !== undefined) {
-      const cls = d.optOI >= 2000 ? 'up-txt' : d.optOI >= 500 ? 'dim-txt' : 'down-txt';
-      oiCell = `<span class="${cls}">${d.optOI.toLocaleString()}</span>`;
-    }
-    return `<tr class="${rowCls}">
-      <td class="left"><span class="ticker">${d.ticker}</span></td>
-      <td>${fmtNum(d.last)}</td>
-      <td class="${pctClass}">${fmtPct(d.pctChg)}</td>
-      <td class="dim-txt">${fmtNum(d.pmPrice)}</td>
-      <td class="dim-txt">${fmtNum(d.ahPrice)}</td>
-      <td>${d.relVol !== null && d.relVol !== undefined ? fmtNum(d.relVol, 2)+'x' : '—'}</td>
-      <td><span class="grade ${grade}">${grade==='unk'?'?':grade}</span></td>
-      <td>${spreadCell}</td>
-      <td>${oiCell}</td>
-      <td>
-        <div class="score-bar-wrap" title="Smooth: ${score.toFixed(2)} | Raw: ${d.rawScore.toFixed(2)}">
-          <div class="score-bar-fill" style="width:${score}%;background:${scoreColor(score)}"></div>
-          <div class="score-bar-text">${scoreInt}</div>
-        </div>
-      </td>
-      <td><span class="arrow ${d.arrow}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></td>
-      <td class="delta ${deltaClass}">${delta>=0?'+':''}${delta.toFixed(1)}</td>
-      <td class="dim-txt">${minSeen}</td>
-      <td class="faint-txt">${fmtTime(d.firstSeen)}</td>
-    </tr>`;
-  }).join('');
-  tbody.innerHTML = rows;
-}
-
-function renderHistory() {
-  const entries = Object.values(state.history);
-  const tbody = qs('histBody');
-  const stats = qs('histStats');
-  const totalTickers = entries.length;
-  const totalObs = entries.reduce((a,h)=>a+h.obsCount, 0);
-  const maxPeak = entries.reduce((a,h)=>Math.max(a, h.peak || 0), 0);
-  const hi75 = entries.filter(h => (h.peak||0) >= 75).length;
-  stats.innerHTML = `
-    <div class="stat-tile"><div class="label">Tickers Tracked</div><div class="val accent">${totalTickers}</div></div>
-    <div class="stat-tile"><div class="label">Total Observations</div><div class="val">${totalObs.toLocaleString()}</div></div>
-    <div class="stat-tile"><div class="label">Peak Score Seen</div><div class="val">${maxPeak.toFixed(1)}</div></div>
-    <div class="stat-tile"><div class="label">Hit ≥ 75</div><div class="val accent">${hi75}</div></div>
-  `;
-  if (entries.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="big">Empty</div>No historical observations yet</div></td></tr>';
-    return;
-  }
-  entries.sort((a,b) => (b.lastSeen||0) - (a.lastSeen||0));
-  tbody.innerHTML = entries.slice(0, 500).map(h => `
-    <tr>
-      <td class="left"><span class="ticker">${h.ticker}</span></td>
-      <td class="dim-txt">${fmtDateTime(h.firstSeen)}</td>
-      <td class="dim-txt">${fmtDateTime(h.lastSeen)}</td>
-      <td>${h.obsCount}</td>
-      <td class="up-txt">${h.peak?.toFixed(1) ?? '—'}</td>
-      <td class="down-txt">${h.low?.toFixed(1) ?? '—'}</td>
-      <td>${h.last?.toFixed(1) ?? '—'}</td>
-      <td>${fmtNum(h.priceLast)}</td>
-    </tr>
-  `).join('');
-}
-
-// ---------- ADAPTIVE REFRESH ----------
-function computeRefreshInterval() {
-  const b = getBehavior();
-  const n = state.active.size;
-  return Math.max(b.minRefresh, Math.ceil(n / 20));
-}
-
-// ---------- PAUSE ----------
-function pauseResume() {
-  state.paused = !state.paused;
-  qs('pauseLabel').textContent = state.paused ? 'Resume' : 'Pause';
-  toast(state.paused ? 'Scan paused' : 'Scan resumed', 'ok');
-}
-
-// ---------- CLOCK LOOP ----------
-let lastPollAt = 0;
-let lastOptSweepAt = 0;
-function tickClock() {
-  const now = Date.now();
-  state.refreshIntervalSec = computeRefreshInterval();
-  qs('refreshLabel').textContent = state.refreshIntervalSec;
-  const elapsed = Math.floor((now - lastPollAt) / 1000);
-  const remaining = Math.max(0, state.refreshIntervalSec - elapsed);
-  qs('countdownLabel').textContent = remaining;
-  // re-render direction/delta every second even without new data
-  if (state.active.size > 0) renderActive();
-  if (!state.paused && elapsed >= state.refreshIntervalSec && state.active.size > 0) {
-    lastPollAt = now;
-    pollOnce();
-  }
-  // Options sweep runs at most every 3 seconds (picks one stale ticker per call).
-  // Individual tickers are throttled by their own optLastChecked timestamp vs optInterval.
-  if (!state.paused && (now - lastOptSweepAt) >= 3000 && state.active.size > 0) {
-    const feed = qs('feedSelect').value;
-    if (feed === 'tradier') {
-      lastOptSweepAt = now;
-      optionsSweep();
-    }
-  }
-}
-
-// ---------- INIT ----------
-function init() {
-  loadKeys();
-  loadSettings();
-  loadOptionsFilter();
-  state.history = lsGet(LS_KEYS.history, {}) || {};
-  restoreActiveTickers();
-
-  // attach listeners for slider labels
-  ['VP','RV','PE','VE','OA'].forEach(k => {
-    qs('w'+k).addEventListener('input', refreshWeightLabels);
-  });
-  ['smoothLag','highThresh','lowThresh','minRefresh'].forEach(id => {
-    qs(id).addEventListener('input', refreshBehaviorLabels);
-  });
-  ['maxSpreadPct','minOptOI','maxDTE','optInterval'].forEach(id => {
-    qs(id).addEventListener('input', refreshOptionsFilterLabels);
-  });
-  qs('feedSelect').addEventListener('change', () => { lsSet(LS_KEYS.feed, qs('feedSelect').value); updateFeedPill(); });
-
-  // handle Schwab OAuth return
-  if (window.location.search.includes('code=')) handleSchwabCallback();
-
-  updateFeedPill();
-  render();
-  setInterval(tickClock, 1000);
-  lastPollAt = Date.now() - 3000; // trigger near-immediate first poll when tickers exist
-}
-
-document.addEventListener('DOMContentLoaded', init);
+// ---- INIT ----
+function init(){loadKeys();loadSettings();loadOptionsFilter();state.history=lsGet(LS_KEYS.history,{})||{};restoreActiveTickers();
+['VP','RV','PE','VE','OA'].forEach(k=>qs('w'+k).addEventListener('input',refreshWeightLabels));
+['smoothLag','highThresh','lowThresh','minRefresh'].forEach(id=>qs(id).addEventListener('input',refreshBehaviorLabels));
+['maxSpreadPct','minOptOI','maxDTE','optInterval'].forEach(id=>qs(id).addEventListener('input',refreshOptionsFilterLabels));
+qs('feedSelect').addEventListener('change',()=>{lsSet(LS_KEYS.feed,qs('feedSelect').value);updateFeedPill()});
+if(location.search.includes('code='))handleSchwabCallback();
+updateFeedPill();render();setInterval(tickClock,1000);lastPollAt=Date.now()-3000}
+document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
 </html>
