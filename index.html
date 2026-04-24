@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MomScanner v3</title>
+<title>MomScanner v4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -65,7 +65,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Grid rows */
 .tbl-scroll{overflow-x:auto;max-height:65vh;overflow-y:auto}
-.g-row{display:grid;grid-template-columns:26px 66px minmax(56px,1fr) 52px 52px 56px 44px 82px 26px 44px 40px;gap:0;padding:7px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums}
+.g-row{display:grid;grid-template-columns:26px 60px minmax(52px,1fr) 50px 50px 52px 42px 76px 24px 42px 50px 36px 38px;gap:0;padding:7px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums}
 .g-row:hover{background:var(--bg-panel-2)}
 .g-hdr{font-size:9.5px;color:var(--text-faint);letter-spacing:.6px;text-transform:uppercase;border-bottom:1px solid var(--border);padding:5px 14px;position:sticky;top:0;background:var(--bg-panel-2);z-index:2}
 .g-hdr:hover{background:var(--bg-panel-2)}
@@ -197,7 +197,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="hdr-left">
     <div class="hdr-mark"></div>
     <span class="hdr-name">MomScanner</span>
-    <span class="hdr-sub">MOMENTUM TERMINAL</span>
+    <span class="hdr-sub">MOMENTUM TERMINAL v4</span>
   </div>
   <div class="hdr-right">
     <div class="pill"><span id="feedDot" class="dot-warn"></span> <strong id="feedLabel">—</strong></div>
@@ -223,10 +223,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="info-box" id="infoBox">
   <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Score formula &middot; Trading signals</div>
   <div class="info-body">
-    <p><strong>Action dots:</strong> Solid green = all 6 criteria met (buy calls). Solid red = all 6 met (buy puts). Hollow = tracking. Dashed+faded = warming up (&lt;3 min, unreliable).</p>
-    <p style="margin-top:6px"><strong>The 6 criteria for "Candidate" status:</strong> Score &ge; threshold &middot; Direction arrow sustained (not flat) &middot; &Delta;Score positive &middot; Spread% &le; 5% &middot; OI &ge; 1,000 &middot; Rel Vol &ge; 2.0x</p>
+    <p><strong>v4 Stability Filter:</strong> A ticker must qualify as candidate for at least N of the last M poll cycles <em>AND</em> remain in the same direction continuously for the minimum streak duration before it promotes to the Candidates list. This prevents the rapid bull/bear flipping seen on choppy days. Tune the thresholds in Settings → Stability Filter.</p>
+    <p style="margin-top:6px"><strong>Streak column:</strong> shows how long this ticker has been continuously qualifying in its current direction. Reset to 0 any time it fails a criterion or reverses direction. Trade when Streak &gt; 1:00.</p>
+    <p style="margin-top:6px"><strong>Flips column:</strong> count of state transitions today. Low = stable trend ticker. High = choppy. Colored orange when approaching warn threshold, red when exceeding it. Avoid trading tickers with high flip counts regardless of current dot color.</p>
+    <p style="margin-top:6px"><strong>Session Log:</strong> every state transition is recorded below with full context (score, price, spread, RelVol). Review after each session to learn which setups worked and which were traps. Export as CSV for analysis.</p>
+    <p style="margin-top:6px"><strong>Action dots:</strong> Solid green/red = stable candidate (passed stability filter). Hollow = tracking. Dashed+faded = warming up (&lt;3 min, unreliable).</p>
     <p style="margin-top:6px"><strong>Score components:</strong> <code>Volume Pressure</code> (30%) uptick/downtick proxy &middot; <code>Relative Volume</code> (20%) vs 20-day avg &middot; <code>Price vs EMA</code> (20%) ATR-normalized &middot; <code>Volatility Expansion</code> (15%) range vs ATR &middot; <code>Options Activity</code> (15%) spread + OI quality</p>
-    <p style="margin-top:6px"><strong>Sparkline:</strong> shows score trajectory over last ~5 min. Rising line = building momentum. Flat line = no conviction. Dashed = still warming up.</p>
   </div>
 </div>
 
@@ -243,7 +245,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="g-row g-hdr">
       <div></div><div>Ticker</div><div class="r">Last</div><div class="r">%Chg</div>
       <div class="r">Sprd%</div><div class="r">RVol</div><div class="r">Score</div>
-      <div class="c">Trend</div><div class="c">Dir</div><div class="r">&Delta;Scr</div><div class="r">Min</div>
+      <div class="c">Trend</div><div class="c">Dir</div><div class="r">&Delta;Scr</div><div class="r">Streak</div><div class="r">Flips</div><div class="r">Min</div>
     </div>
     <div id="candBody"></div>
     <!-- Watching section -->
@@ -263,6 +265,34 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <button class="btn" onclick="exportActiveCSV()" style="font-size:10px;padding:3px 8px">Export CSV</button>
     </div>
     <span id="footStatus">Penny Pilot ON &middot; Spread max 15%</span>
+  </div>
+</div>
+
+<!-- SESSION LOG (v4) -->
+<div class="hist-panel" id="logPanel">
+  <div class="hist-head" onclick="toggleLog()">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span style="font-family:'Syne',sans-serif;font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--accent)">Session Log</span>
+      <span id="logCount" style="font-size:10.5px;color:var(--text-faint)">0 transitions</span>
+    </div>
+    <span class="caret">&#x25BE;</span>
+  </div>
+  <div class="hist-body">
+    <div class="hist-stats" id="logStats"></div>
+    <div class="btn-row" style="margin-bottom:8px">
+      <button class="btn primary" onclick="exportTransitionsCSV()" style="font-size:10px;padding:3px 8px">Export Transitions CSV</button>
+      <button class="btn" onclick="loadTransitionsFromStorage()" style="font-size:10px;padding:3px 8px">Reload</button>
+      <button class="btn danger" onclick="clearTransitions()" style="font-size:10px;padding:3px 8px">Clear Log</button>
+    </div>
+    <div class="hist-tbl-wrap">
+      <table class="hist-tbl">
+        <thead><tr>
+          <th style="text-align:left">Time</th><th style="text-align:left">Ticker</th><th style="text-align:left">Transition</th><th>Score</th><th>Δ</th><th>Price</th><th>%Chg</th><th>Sprd%</th><th>RVol</th>
+        </tr></thead>
+        <tbody id="logBody"><tr><td colspan="9"><div class="empty"><div class="big">Empty</div>No transitions logged yet</div></td></tr></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -339,6 +369,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 
   <div class="sg">
+    <h4>Stability Filter (v4)</h4>
+    <div class="fld"><label>Stability Window (# of cycles)</label><div class="rng-row"><input type="range" min="5" max="20" id="stabWindow" value="10"/><span class="rng-val" id="stabWindowVal">10</span></div></div>
+    <div class="fld"><label>Min Qualifying Cycles</label><div class="rng-row"><input type="range" min="3" max="20" id="stabMinQual" value="8"/><span class="rng-val" id="stabMinQualVal">8</span></div></div>
+    <div class="fld"><label>Min Streak Before Promote (sec)</label><div class="rng-row"><input type="range" min="0" max="180" step="5" id="stabMinStreak" value="60"/><span class="rng-val" id="stabMinStreakVal">60s</span></div></div>
+    <div class="fld"><label>Max Flip Count (warn threshold)</label><div class="rng-row"><input type="range" min="3" max="30" id="stabFlipWarn" value="8"/><span class="rng-val" id="stabFlipWarnVal">8</span></div></div>
+    <div class="btn-row"><button class="btn primary" onclick="saveStability()">Save Stability</button></div>
+  </div>
+
+  <div class="sg">
     <h4>Behavior</h4>
     <div class="fld"><label>Smoothing Lag (seconds)</label><div class="rng-row"><input type="range" min="10" max="180" id="smoothLag" value="60"/><span class="rng-val" id="smoothLagVal">60s</span></div></div>
     <div class="fld"><label>Green Threshold (score &ge;)</label><div class="rng-row"><input type="range" min="50" max="95" id="highThresh" value="75"/><span class="rng-val" id="highThreshVal">75</span></div></div>
@@ -354,11 +393,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="toast-c" id="toastContainer"></div>
 
 <script>
-const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'ms_schwab_key',schwabSecret:'ms_schwab_secret',schwabCallback:'ms_schwab_callback',schwabToken:'ms_schwab_token',feed:'ms_feed',weights:'ms_weights',behavior:'ms_behavior',optionsFilter:'ms_options_filter',history:'ms_history_v1',activeTickers:'ms_active_tickers'};
+const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'ms_schwab_key',schwabSecret:'ms_schwab_secret',schwabCallback:'ms_schwab_callback',schwabToken:'ms_schwab_token',feed:'ms_feed',weights:'ms_weights',behavior:'ms_behavior',optionsFilter:'ms_options_filter',stability:'ms_stability',history:'ms_history_v1',activeTickers:'ms_active_tickers',transitions:'ms_transitions_v1'};
 
 const PENNY_PILOT=new Set(['AAPL','MSFT','AMZN','GOOGL','GOOG','META','NVDA','TSLA','NFLX','ADBE','CRM','ORCL','CSCO','INTC','AMD','QCOM','AVGO','TXN','MU','AMAT','LRCX','KLAC','ASML','ARM','SPY','QQQ','IWM','DIA','XLF','XLE','XLK','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','SMH','SOXX','SOXL','SOXS','TQQQ','SQQQ','UVXY','VXX','SVXY','TLT','TBT','GLD','SLV','USO','UNG','EEM','EFA','FXI','EWZ','INDA','HYG','JNK','LQD','AGG','VTI','VOO','VTV','VUG','ARKK','ARKQ','ARKW','ARKG','ARKF','MAGS','IBIT','FBTC','ETHA','SPXL','SPXS','TNA','TZA','LABU','LABD','FAS','FAZ','JPM','BAC','WFC','C','GS','MS','BRK.B','V','MA','AXP','PYPL','SQ','BLK','SCHW','COF','USB','PNC','TFC','MET','PRU','AIG','AFL','ALL','TRV','CB','COIN','HOOD','SOFI','AFRM','UPST','LMND','WMT','COST','TGT','HD','LOW','NKE','SBUX','MCD','CMG','DIS','LULU','ULTA','ROST','TJX','BBY','KSS','M','GPS','DKS','DG','DLTR','FL','ANF','AEO','BURL','GE','CAT','DE','BA','LMT','RTX','NOC','GD','HON','MMM','UPS','FDX','UNP','CSX','NSC','F','GM','RIVN','LCID','NIO','XPEV','LI','FSR','NKLA','CCL','RCL','NCLH','AAL','UAL','DAL','LUV','XOM','CVX','COP','OXY','SLB','HAL','EOG','PXD','MRO','DVN','APA','HES','FANG','PSX','VLO','MPC','JNJ','PFE','MRK','LLY','ABBV','BMY','GILD','AMGN','BIIB','REGN','VRTX','MRNA','BNTX','NVAX','PLUG','FCEL','SAVA','UNH','CVS','CI','HUM','ANTM','HCA','TMO','DHR','ABT','MDT','SYK','BSX','ISRG','ZTS','HOLX','IDXX','DXCM','PODD','IQV','T','VZ','TMUS','CHTR','CMCSA','DISH','PARA','WBD','FOX','FOXA','ROKU','SPOT','SHOP','EBAY','ETSY','PINS','SNAP','UBER','LYFT','ABNB','DASH','BKNG','EXPE','TRIP','DKNG','PENN','CZR','WYNN','MGM','LVS','RBLX','EA','TTWO','ATVI','U','DDOG','NET','SNOW','CRWD','ZS','PANW','FTNT','OKTA','PLTR','TEAM','MDB','DOCU','ZM','WORK','SPLK','TWLO','ESTC','CFLT','GTLB','AMT','PLD','CCI','EQIX','DLR','O','SPG','AVB','EQR','WELL','PSA','VICI','VTR','SBAC','SO','NEE','DUK','D','AEP','EXC','SRE','XEL','PCG','ED','EIX','PEG','WEC','ES','ETR','DTE','PPL','CMS','AES','AEE','FCX','NEM','GOLD','AA','X','CLF','MT','VALE','RIO','BHP','SCCO','STLD','NUE','CF','MOS','FMC','LIN','APD','SHW','ECL','PPG','DD','DOW','LYB','CE','ALB','WRB','BABA','JD','PDD','BIDU','NTES','TCOM','TME','VIPS','BILI','IQ','TAL','EDU','YMM','DIDI','BZ','ZH','MNSO','TIGR','FUTU','DQ','JKS','CSIQ','BEKE','GME','AMC','BBBY','BB','NOK','WISH','CLOV','WKHS','TLRY','CGC','ACB','SNDL','HEXO','APHA','CRON','MARA','RIOT','CLSK','HUT','BITF','BTBT','CAN','CIFR','WULF','APLD','HIVE','GREE','SMCI','VRT','POWL','BE','FLNC','STEM','CHPT','BLNK','EVGO','WKSP','GOEV','RIDE','HYLN','QS','MVIS','LAZR','VLDR','INVZ','OUST','IBM','HPQ','HPE','DELL','STX','WDC','NTAP','ANET','ZBRA','JNPR','MRVL','ADI','NXPI','ON','SWKS','QRVO','TER','ACLS','AEHR','RMBS','SITM','WOLF','CRDO','NVTS','IOT','SPT','BOX','DBX','HUBS','NOW','WDAY','INTU','ADP','PAYX','PAYC','CDAY','PCTY','FICO','FDS','MORN','MCO','SPGI','VRSK','BR','IT','ACN','CTSH','INFY','WIT','EPAM','GLOB','EXLS','FIS','FISV','GPN','WU','DFS','SYF','ALLY','CIT','NAVI','SLM','LEND']);
 
-const state={active:new Map(),history:{},paused:false,countdown:0,refreshIntervalSec:5,schwabAccessToken:null,lastFeedStatus:'idle',priceHistory:new Map(),scoreHistory:new Map()};
+const state={active:new Map(),history:{},transitions:[],paused:false,countdown:0,refreshIntervalSec:5,schwabAccessToken:null,lastFeedStatus:'idle',priceHistory:new Map(),scoreHistory:new Map()};
 
 function lsGet(k,d=null){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Storage error: '+e.message,'err')}}
@@ -373,6 +412,7 @@ function clamp(x,lo=0,hi=100){return Math.max(lo,Math.min(hi,x))}
 // ---- SETTINGS ----
 function toggleSettings(){qs('settingsOverlay').classList.toggle('open');qs('settingsDrawer').classList.toggle('open')}
 function toggleHistory(){qs('histPanel').classList.toggle('collapsed')}
+function toggleLog(){qs('logPanel').classList.toggle('collapsed')}
 
 function saveKeys(){lsSet(LS_KEYS.tradier,qs('tradierKey').value.trim());lsSet(LS_KEYS.tradierEnv,qs('tradierEnv').value);lsSet(LS_KEYS.schwabKey,qs('schwabKey').value.trim());lsSet(LS_KEYS.schwabSecret,qs('schwabSecret').value.trim());lsSet(LS_KEYS.schwabCallback,qs('schwabCallback').value.trim());lsSet(LS_KEYS.feed,qs('feedSelect').value);toast('Keys saved','ok');updateFeedPill()}
 function loadKeys(){qs('tradierKey').value=lsGet(LS_KEYS.tradier,'')||'';qs('tradierEnv').value=lsGet(LS_KEYS.tradierEnv,'https://api.tradier.com/v1')||'https://api.tradier.com/v1';qs('schwabKey').value=lsGet(LS_KEYS.schwabKey,'')||'';qs('schwabSecret').value=lsGet(LS_KEYS.schwabSecret,'')||'';qs('schwabCallback').value=lsGet(LS_KEYS.schwabCallback,'')||(location.origin+location.pathname);qs('feedSelect').value=lsGet(LS_KEYS.feed,'tradier')||'tradier';const t=lsGet(LS_KEYS.schwabToken,null);if(t&&t.access_token)state.schwabAccessToken=t.access_token}
@@ -390,10 +430,15 @@ function loadOptionsFilter(){const o=lsGet(LS_KEYS.optionsFilter,{pennyPilotOnly
 function refreshOptionsFilterLabels(){qs('maxSpreadPctVal').textContent=qs('maxSpreadPct').value+'%';qs('minOptOIval').textContent=qs('minOptOI').value;qs('maxDTEval').textContent=qs('maxDTE').value+'d';qs('optIntervalVal').textContent=qs('optInterval').value+'s'}
 function getOptionsFilter(){return lsGet(LS_KEYS.optionsFilter,{pennyPilotOnly:true,maxSpreadPct:15,minOptOI:500,maxDTE:14,optInterval:60})}
 
+function saveStability(){lsSet(LS_KEYS.stability,{window:+qs('stabWindow').value,minQual:+qs('stabMinQual').value,minStreak:+qs('stabMinStreak').value,flipWarn:+qs('stabFlipWarn').value});toast('Stability saved','ok');render()}
+function loadStability(){const s=lsGet(LS_KEYS.stability,{window:10,minQual:8,minStreak:60,flipWarn:8});qs('stabWindow').value=s.window??10;qs('stabMinQual').value=s.minQual??8;qs('stabMinStreak').value=s.minStreak??60;qs('stabFlipWarn').value=s.flipWarn??8;refreshStabilityLabels()}
+function refreshStabilityLabels(){qs('stabWindowVal').textContent=qs('stabWindow').value;qs('stabMinQualVal').textContent=qs('stabMinQual').value;qs('stabMinStreakVal').textContent=qs('stabMinStreak').value+'s';qs('stabFlipWarnVal').textContent=qs('stabFlipWarn').value}
+function getStability(){return lsGet(LS_KEYS.stability,{window:10,minQual:8,minStreak:60,flipWarn:8})}
+
 function updateFeedPill(){const f=qs('feedSelect').value,dot=qs('feedDot'),lbl=qs('feedLabel');dot.className=state.lastFeedStatus==='ok'?'dot-live':state.lastFeedStatus==='err'?'dot-err':'dot-warn';lbl.textContent=f==='tradier'?'Tradier L2':(state.schwabAccessToken?'Schwab':'Schwab (no token)')}
 
 // ---- TICKER MGMT ----
-function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50}}}
+function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null}}
 
 function addTickers(){const raw=qs('tickerInput').value,parts=raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));if(!parts.length){toast('No valid tickers','err');return}const of=getOptionsFilter();let added=0,rejected=0;const now=Date.now(),rejList=[];parts.forEach(t=>{if(of.pennyPilotOnly&&!PENNY_PILOT.has(t)){rejected++;rejList.push(t);return}if(!state.active.has(t)){state.active.set(t,makeTicker(t,now));state.priceHistory.set(t,[]);state.scoreHistory.set(t,[]);added++}});qs('tickerInput').value='';saveActiveTickers();render();let msg=`Added ${added} ticker${added!==1?'s':''}`;if(rejected)msg+=` · ${rejected} rejected (non-Penny-Pilot: ${rejList.slice(0,4).join(', ')}${rejList.length>4?'…':''})`;toast(msg,rejected>added?'err':'ok',4500)}
 
@@ -457,21 +502,57 @@ function connectSchwab(){const k=qs('schwabKey').value.trim(),cb=qs('schwabCallb
 async function handleSchwabCallback(){const p=new URLSearchParams(location.search),code=p.get('code');if(!code)return;const k=lsGet(LS_KEYS.schwabKey,''),s=lsGet(LS_KEYS.schwabSecret,''),cb=lsGet(LS_KEYS.schwabCallback,'');if(!k||!s){toast('Missing Schwab creds','err');return}try{const r=await fetch('https://api.schwabapi.com/v1/oauth/token',{method:'POST',headers:{'Authorization':'Basic '+btoa(k+':'+s),'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`});if(!r.ok)throw new Error('Token HTTP '+r.status);const t=await r.json();lsSet(LS_KEYS.schwabToken,t);state.schwabAccessToken=t.access_token;history.replaceState({},document.title,cb);toast('Schwab connected','ok');updateFeedPill()}catch(e){toast('Schwab OAuth failed: '+e.message,'err')}}
 
 // ---- POLL LOOP ----
-async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateDirection(d,t);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d)});state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
+async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateDirection(d,t);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d);updateStability(d)});state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
 
 // ---- HISTORY ----
 function recordHistory(d){const h=state.history[d.ticker]||{ticker:d.ticker,firstSeen:d.firstSeen,lastSeen:d.lastSeen,obsCount:0,peak:d.smoothScore,low:d.smoothScore,last:d.smoothScore,priceLast:d.last};h.lastSeen=d.lastSeen;h.obsCount++;h.peak=Math.max(h.peak,d.smoothScore);h.low=Math.min(h.low,d.smoothScore);h.last=d.smoothScore;h.priceLast=d.last;state.history[d.ticker]=h;if(h.obsCount%5===0)lsSet(LS_KEYS.history,state.history)}
 function loadHistoryFromStorage(){state.history=lsGet(LS_KEYS.history,{})||{};renderHistory();toast('History loaded','ok')}
 function clearHistory(){if(!confirm('Clear ENTIRE history? Cannot undo.'))return;state.history={};lsSet(LS_KEYS.history,{});renderHistory();toast('History cleared','ok')}
 
+// ---- TRANSITION LOG (v4) ----
+function logTransition(ticker,fromState,toState,d){
+  const entry={
+    t:Date.now(),
+    ticker:ticker,
+    from:fromState,
+    to:toState,
+    score:d.smoothScore?.toFixed(1),
+    rawScore:d.rawScore?.toFixed(1),
+    price:d.last,
+    pctChg:d.pctChg?.toFixed(2),
+    spreadPct:d.optSpreadPct?.toFixed(2),
+    oi:d.optOI,
+    arrow:d.arrow,
+    relVol:d.relVol?.toFixed(2)
+  };
+  state.transitions.push(entry);
+  // cap memory at 5000 entries, persist periodically
+  if(state.transitions.length>5000)state.transitions.shift();
+  if(state.transitions.length%20===0)lsSet(LS_KEYS.transitions,state.transitions.slice(-2000));
+  renderTransitionLog();
+}
+function loadTransitionsFromStorage(){state.transitions=lsGet(LS_KEYS.transitions,[])||[];renderTransitionLog();toast('Transitions loaded','ok')}
+function clearTransitions(){if(!confirm('Clear entire transition log? Cannot undo.'))return;state.transitions=[];lsSet(LS_KEYS.transitions,[]);renderTransitionLog();toast('Transitions cleared','ok')}
+
+function exportTransitionsCSV(){
+  const rows=[['Timestamp','Ticker','From','To','SmoothScore','RawScore','Price','PctChg','SpreadPct','OI','Arrow','RelVol']];
+  state.transitions.forEach(e=>{
+    rows.push([new Date(e.t).toISOString(),e.ticker,e.from,e.to,e.score,e.rawScore,e.price,e.pctChg,e.spreadPct,e.oi,e.arrow,e.relVol]);
+  });
+  dlCSV('momscanner_transitions_'+Date.now()+'.csv',rows);
+}
+
 // ---- CSV ----
 function csvE(v){if(v==null)return'';const s=String(v);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
 function dlCSV(name,rows){const csv=rows.map(r=>r.map(csvE).join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function exportActiveCSV(){const rows=[['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','OptBid','OptAsk','OptSpreadPct','OptOI','OptDTE','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','FirstSeen','LastSeen','MinutesSeen']],now=Date.now();state.active.forEach(d=>{rows.push([d.ticker,d.last,d.pctChg,d.volume,d.relVol,d.bid,d.ask,d.optBid,d.optAsk,d.optSpreadPct?.toFixed(2),d.optOI,d.optDTE,d.rawScore?.toFixed(2),d.smoothScore?.toFixed(2),d.firstSeenScore?.toFixed(2),(d.rawScore-(d.firstSeenScore??d.rawScore)).toFixed(2),d.arrow,new Date(d.firstSeen).toISOString(),d.lastSeen?new Date(d.lastSeen).toISOString():'',((now-d.firstSeen)/6e4).toFixed(1)])});dlCSV('momscanner_active_'+Date.now()+'.csv',rows)}
+function exportActiveCSV(){const rows=[['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','OptBid','OptAsk','OptSpreadPct','OptOI','OptDTE','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','CurrentState','StreakSec','FlipCount','FirstSeen','LastSeen','MinutesSeen']],now=Date.now();state.active.forEach(d=>{const streakSec=d.streakStart?Math.floor((now-d.streakStart)/1000):0;rows.push([d.ticker,d.last,d.pctChg,d.volume,d.relVol,d.bid,d.ask,d.optBid,d.optAsk,d.optSpreadPct?.toFixed(2),d.optOI,d.optDTE,d.rawScore?.toFixed(2),d.smoothScore?.toFixed(2),d.firstSeenScore?.toFixed(2),(d.rawScore-(d.firstSeenScore??d.rawScore)).toFixed(2),d.arrow,d.currentState,streakSec,d.flipCount,new Date(d.firstSeen).toISOString(),d.lastSeen?new Date(d.lastSeen).toISOString():'',((now-d.firstSeen)/6e4).toFixed(1)])});dlCSV('momscanner_active_'+Date.now()+'.csv',rows)}
 function exportHistoryCSV(){const rows=[['Ticker','FirstSeen','LastSeen','ObsCount','PeakScore','LowScore','LastScore','PriceLast']];Object.values(state.history).forEach(h=>{rows.push([h.ticker,new Date(h.firstSeen).toISOString(),h.lastSeen?new Date(h.lastSeen).toISOString():'',h.obsCount,h.peak?.toFixed(2),h.low?.toFixed(2),h.last?.toFixed(2),h.priceLast])});dlCSV('momscanner_history_'+Date.now()+'.csv',rows)}
 
-// ---- CANDIDATE CLASSIFICATION ----
-function classifyTicker(d){
+// ---- CANDIDATE CLASSIFICATION (v4 two-stage) ----
+
+// Stage 1: Does this ticker meet the 6 criteria RIGHT NOW (raw qualification)?
+// Returns 'bull', 'bear', 'watch', or 'warmup'
+function rawQualify(d){
   const b=getBehavior(),minSeen=(Date.now()-d.firstSeen)/60000;
   if(minSeen<3)return'warmup';
   const score=d.smoothScore??50,delta=(d.firstSeenScore!=null)?d.rawScore-d.firstSeenScore:0;
@@ -485,6 +566,71 @@ function classifyTicker(d){
   return'watch';
 }
 
+// Update the stability window + streak state + flip count.
+// Called once per poll cycle per ticker.
+function updateStability(d){
+  const stab=getStability();
+  const rawState=rawQualify(d);
+  // push into rolling window
+  d.stabilityWindow.push(rawState);
+  if(d.stabilityWindow.length>stab.window)d.stabilityWindow.shift();
+
+  // count qualifying cycles of each direction in the window
+  const bullCount=d.stabilityWindow.filter(s=>s==='bull').length;
+  const bearCount=d.stabilityWindow.filter(s=>s==='bear').length;
+
+  // determine the stability-filtered state
+  let stableState='watch';
+  if(d.stabilityWindow.length>=stab.minQual){
+    if(bullCount>=stab.minQual)stableState='bull';
+    else if(bearCount>=stab.minQual)stableState='bear';
+  }
+  // warmup overrides until we have enough data
+  const minSeen=(Date.now()-d.firstSeen)/60000;
+  if(minSeen<3)stableState='warmup';
+
+  // streak tracking: sync to rawState (streak is about actual qualification, not stability gate)
+  const now=Date.now();
+  if(rawState==='bull'||rawState==='bear'){
+    if(d.streakState===rawState){
+      // same direction, streak continues — nothing to do
+    } else {
+      // new streak (switched direction or starting from watch/warmup)
+      d.streakState=rawState;
+      d.streakStart=now;
+    }
+  } else {
+    // watch or warmup → streak ends
+    d.streakState=null;
+    d.streakStart=null;
+  }
+
+  // determine DISPLAYED state: must pass both stability window AND min-streak-duration
+  let displayState=stableState;
+  if(displayState==='bull'||displayState==='bear'){
+    const streakSec=d.streakStart?(now-d.streakStart)/1000:0;
+    if(d.streakState!==displayState||streakSec<stab.minStreak){
+      // hasn't been continuously in this state long enough — demote to watch
+      displayState='watch';
+    }
+  }
+
+  // record state TRANSITIONS (displayed state changes)
+  if(d.currentState!==displayState){
+    logTransition(d.ticker,d.currentState,displayState,d);
+    // count flips: any transition between bull/bear counts, also watch->bull/bear and bull/bear->watch
+    if((d.currentState==='bull'||d.currentState==='bear')&&(displayState==='bull'||displayState==='bear')&&d.currentState!==displayState){
+      d.flipCount+=2; // direction reversal counts as 2 (out + in)
+    } else if(d.currentState==='bull'||d.currentState==='bear'||displayState==='bull'||displayState==='bear'){
+      d.flipCount++;
+    }
+    d.currentState=displayState;
+    d.lastTransitionAt=now;
+  }
+
+  return displayState;
+}
+
 function scoreColor(s){if(s>=75)return'var(--up)';if(s>=60)return'#7fd99a';if(s>=40)return'var(--accent)';if(s>=25)return'#ff9e6e';return'var(--down)'}
 
 // ---- RENDER ----
@@ -493,12 +639,12 @@ function render(){renderActive();renderHistory();updateFooterStatus()}
 function renderActive(){
   const of=getOptionsFilter(),allArr=Array.from(state.active.values());
   qs('activeCount').textContent=allArr.length;
-  // filter hidden
+  // filter hidden (options liquidity)
   const visible=allArr.filter(d=>{if(d.optSpreadPct!=null&&d.optSpreadPct>of.maxSpreadPct)return false;if(d.optOI!=null&&d.optOI>0&&d.optOI<of.minOptOI)return false;return true});
   const hidden=allArr.length-visible.length;
-  // classify
+  // classify for display using v4 persisted state (updated in pollOnce)
   const candidates=[],watching=[];
-  visible.forEach(d=>{const c=classifyTicker(d);d._class=c;if(c==='bull'||c==='bear')candidates.push(d);else watching.push(d)});
+  visible.forEach(d=>{const c=d.currentState||'warmup';d._class=c;if(c==='bull'||c==='bear')candidates.push(d);else watching.push(d)});
   // sort each group
   const sorter=(a,b)=>{const ds=(b.smoothScore??0)-(a.smoothScore??0);if(Math.abs(ds)>.01)return ds;return(a.optSpreadPct??999)-(b.optSpreadPct??999)};
   candidates.sort(sorter);watching.sort(sorter);
@@ -527,10 +673,60 @@ function renderRow(d){
   // rel vol
   const rvolHTML=d.relVol!=null?`${fmtN(d.relVol,1)}x`:'—';
   const rvolCls=d.relVol!=null?(d.relVol>=2?'':'c-dim'):'c-faint';
-  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}"></span></div><div class="tkr">${d.ticker}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div><div class="r"><div class="score-bar"><div class="score-fill" style="width:${score}%;background:${scoreColor(score)}"></div><div class="score-txt">${scoreInt}</div></div></div><div class="c">${renderSparkline(d.ticker,d.arrow)}</div><div class="c"><span class="arr ${d.arrow==='up'?'arr-up':d.arrow==='down'?'arr-down':'arr-flat'}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></div><div class="r ${deltaCls}">${delta>=0?'+':''}${delta.toFixed(1)}</div><div class="r c-faint">${minSeen}</div></div>`
+  // STREAK (v4): time in the current qualifying direction
+  let streakHTML='<span class="c-faint">—</span>';
+  if(d.streakStart&&d.streakState){
+    const secs=Math.floor((now-d.streakStart)/1000);
+    const mm=Math.floor(secs/60),ss=secs%60;
+    const streakStr=mm>0?`${mm}:${ss.toString().padStart(2,'0')}`:`${ss}s`;
+    const scol=d.streakState==='bull'?'c-up':'c-down';
+    streakHTML=`<span class="${scol}" title="Qualifying direction: ${d.streakState}">${streakStr}</span>`;
+  }
+  // FLIPS (v4)
+  const stab=getStability();
+  const flipCls=d.flipCount>=stab.flipWarn?'c-down':d.flipCount>=Math.floor(stab.flipWarn/2)?'c-accent':'c-faint';
+  const flipHTML=`<span class="${flipCls}" title="State transitions today (high = choppy ticker)">${d.flipCount}</span>`;
+  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}"></span></div><div class="tkr">${d.ticker}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div><div class="r"><div class="score-bar"><div class="score-fill" style="width:${score}%;background:${scoreColor(score)}"></div><div class="score-txt">${scoreInt}</div></div></div><div class="c">${renderSparkline(d.ticker,d.arrow)}</div><div class="c"><span class="arr ${d.arrow==='up'?'arr-up':d.arrow==='down'?'arr-down':'arr-flat'}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></div><div class="r ${deltaCls}">${delta>=0?'+':''}${delta.toFixed(1)}</div><div class="r">${streakHTML}</div><div class="r">${flipHTML}</div><div class="r c-faint">${minSeen}</div></div>`
 }
 
 function renderHistory(){const entries=Object.values(state.history),tbody=qs('histBody'),stats=qs('histStats');const total=entries.length,obs=entries.reduce((a,h)=>a+h.obsCount,0),peak=entries.reduce((a,h)=>Math.max(a,h.peak||0),0),hi=entries.filter(h=>(h.peak||0)>=75).length;stats.innerHTML=`<div class="stat-tile"><div class="slbl">Tickers</div><div class="sval accent">${total}</div></div><div class="stat-tile"><div class="slbl">Observations</div><div class="sval">${obs.toLocaleString()}</div></div><div class="stat-tile"><div class="slbl">Peak Score</div><div class="sval">${peak.toFixed(1)}</div></div><div class="stat-tile"><div class="slbl">Hit ≥ 75</div><div class="sval accent">${hi}</div></div>`;if(!entries.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="big">Empty</div></div></td></tr>';return}entries.sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));tbody.innerHTML=entries.slice(0,500).map(h=>`<tr><td style="text-align:left"><span class="tkr">${h.ticker}</span></td><td class="c-faint">${fmtDT(h.firstSeen)}</td><td class="c-faint">${fmtDT(h.lastSeen)}</td><td>${h.obsCount}</td><td class="c-up">${h.peak?.toFixed(1)??'—'}</td><td class="c-down">${h.low?.toFixed(1)??'—'}</td><td>${h.last?.toFixed(1)??'—'}</td><td>${fmtN(h.priceLast)}</td></tr>`).join('')}
+
+function renderTransitionLog(){
+  const tbody=qs('logBody'),stats=qs('logStats');
+  const n=state.transitions.length;
+  qs('logCount').textContent=`${n} transition${n!==1?'s':''}`;
+  // compute session stats
+  const tickerStats={}; // ticker -> {promotions, totalTimeInCandidate, flipCount}
+  const promotions=state.transitions.filter(e=>(e.to==='bull'||e.to==='bear')&&(e.from!=='bull'&&e.from!=='bear'));
+  const demotions=state.transitions.filter(e=>(e.from==='bull'||e.from==='bear')&&(e.to!=='bull'&&e.to!=='bear'));
+  // compute average candidate duration by pairing promotions with the next demotion for each ticker
+  const durations=[];
+  const openPromotions={};
+  state.transitions.forEach(e=>{
+    if(e.to==='bull'||e.to==='bear'){openPromotions[e.ticker]=e.t}
+    else if((e.from==='bull'||e.from==='bear')&&openPromotions[e.ticker]){
+      durations.push(e.t-openPromotions[e.ticker]);
+      delete openPromotions[e.ticker];
+    }
+  });
+  const avgDurSec=durations.length?durations.reduce((a,b)=>a+b,0)/durations.length/1000:0;
+  // most-flipped ticker
+  const flipsByTicker={};
+  state.transitions.forEach(e=>{flipsByTicker[e.ticker]=(flipsByTicker[e.ticker]||0)+1});
+  const maxFlipTicker=Object.entries(flipsByTicker).sort((a,b)=>b[1]-a[1])[0];
+  stats.innerHTML=`<div class="stat-tile"><div class="slbl">Promotions</div><div class="sval accent">${promotions.length}</div></div><div class="stat-tile"><div class="slbl">Demotions</div><div class="sval">${demotions.length}</div></div><div class="stat-tile"><div class="slbl">Avg Candidate</div><div class="sval">${avgDurSec>0?Math.floor(avgDurSec/60)+':'+Math.floor(avgDurSec%60).toString().padStart(2,'0'):'—'}</div></div><div class="stat-tile"><div class="slbl">Most Flipped</div><div class="sval" style="font-size:13px">${maxFlipTicker?`${maxFlipTicker[0]} (${maxFlipTicker[1]})`:'—'}</div></div>`;
+  if(n===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty"><div class="big">Empty</div>No transitions logged yet</div></td></tr>';return}
+  // show newest first, cap at 300 rows for UI perf
+  const shown=state.transitions.slice(-300).reverse();
+  tbody.innerHTML=shown.map(e=>{
+    const fromSym=stateToSymbol(e.from),toSym=stateToSymbol(e.to);
+    const transCls=e.to==='bull'?'c-up':e.to==='bear'?'c-down':'c-dim';
+    const delta=(parseFloat(e.rawScore)-parseFloat(e.score)).toFixed(1);
+    const deltaCls=parseFloat(delta)>0?'c-up':parseFloat(delta)<0?'c-down':'c-faint';
+    return`<tr><td style="text-align:left" class="c-faint">${fmtT(e.t)}</td><td style="text-align:left"><span class="tkr">${e.ticker}</span></td><td style="text-align:left" class="${transCls}">${fromSym} → ${toSym}</td><td>${e.score??'—'}</td><td class="${deltaCls}">${delta}</td><td>${fmtN(e.price)}</td><td>${e.pctChg??'—'}%</td><td>${e.spreadPct??'—'}</td><td>${e.relVol??'—'}</td></tr>`;
+  }).join('');
+}
+function stateToSymbol(s){return s==='bull'?'🟢 BULL':s==='bear'?'🔴 BEAR':s==='warmup'?'⌛ WARMUP':'○ WATCH'}
 
 function updateFooterStatus(){const of=getOptionsFilter();qs('footStatus').textContent=`${of.pennyPilotOnly?'Penny Pilot ON':'Penny Pilot OFF'} · Spread max ${of.maxSpreadPct}% · OI min ${of.minOptOI} · Last: ${fmtT(Date.now())}`}
 
@@ -543,13 +739,14 @@ let lastPollAt=0,lastOptSweepAt=0;
 function tickClock(){const now=Date.now();state.refreshIntervalSec=computeRefreshInterval();qs('refreshLabel').textContent=state.refreshIntervalSec;const elapsed=Math.floor((now-lastPollAt)/1000),remaining=Math.max(0,state.refreshIntervalSec-elapsed);qs('countdownLabel').textContent=remaining;if(state.active.size>0)renderActive();if(!state.paused&&elapsed>=state.refreshIntervalSec&&state.active.size>0){lastPollAt=now;pollOnce()}if(!state.paused&&(now-lastOptSweepAt)>=3000&&state.active.size>0){const f=qs('feedSelect').value;if(f==='tradier'){lastOptSweepAt=now;optionsSweep()}}}
 
 // ---- INIT ----
-function init(){loadKeys();loadSettings();loadOptionsFilter();state.history=lsGet(LS_KEYS.history,{})||{};restoreActiveTickers();
+function init(){loadKeys();loadSettings();loadOptionsFilter();loadStability();state.history=lsGet(LS_KEYS.history,{})||{};state.transitions=lsGet(LS_KEYS.transitions,[])||[];restoreActiveTickers();
 ['VP','RV','PE','VE','OA'].forEach(k=>qs('w'+k).addEventListener('input',refreshWeightLabels));
 ['smoothLag','highThresh','lowThresh','minRefresh'].forEach(id=>qs(id).addEventListener('input',refreshBehaviorLabels));
 ['maxSpreadPct','minOptOI','maxDTE','optInterval'].forEach(id=>qs(id).addEventListener('input',refreshOptionsFilterLabels));
+['stabWindow','stabMinQual','stabMinStreak','stabFlipWarn'].forEach(id=>qs(id).addEventListener('input',refreshStabilityLabels));
 qs('feedSelect').addEventListener('change',()=>{lsSet(LS_KEYS.feed,qs('feedSelect').value);updateFeedPill()});
 if(location.search.includes('code='))handleSchwabCallback();
-updateFeedPill();render();setInterval(tickClock,1000);lastPollAt=Date.now()-3000}
+updateFeedPill();render();renderTransitionLog();setInterval(tickClock,1000);lastPollAt=Date.now()-3000}
 document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
