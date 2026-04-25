@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MomScanner v4</title>
+<title>MomScanner v5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -65,7 +65,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Grid rows */
 .tbl-scroll{overflow-x:auto;max-height:65vh;overflow-y:auto}
-.g-row{display:grid;grid-template-columns:26px 60px minmax(52px,1fr) 50px 50px 52px 42px 76px 24px 42px 50px 36px 38px;gap:0;padding:7px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums}
+.g-row{display:grid;grid-template-columns:24px 58px minmax(50px,1fr) 48px 48px 50px 40px 72px 22px 40px 48px 48px 32px 34px 36px;gap:0;padding:7px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums}
 .g-row:hover{background:var(--bg-panel-2)}
 .g-hdr{font-size:9.5px;color:var(--text-faint);letter-spacing:.6px;text-transform:uppercase;border-bottom:1px solid var(--border);padding:5px 14px;position:sticky;top:0;background:var(--bg-panel-2);z-index:2}
 .g-hdr:hover{background:var(--bg-panel-2)}
@@ -75,6 +75,35 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .row-bull{background:rgba(0,214,138,0.04)}
 .row-bear{background:rgba(255,77,94,0.03)}
 .row-fade{opacity:.45;transition:opacity .3s}
+.row-accel{background:linear-gradient(90deg,rgba(255,170,0,0.08),rgba(255,170,0,0.02));border-left:2px solid var(--accent)}
+
+/* v5: Momentum type badges */
+.mtype{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;letter-spacing:.5px;text-transform:uppercase}
+.mtype-drift{background:rgba(0,214,138,0.15);color:var(--up)}
+.mtype-thrust{background:rgba(255,170,0,0.18);color:var(--accent)}
+.mtype-reversal{background:rgba(74,163,255,0.15);color:var(--blue)}
+
+/* v5: Breakout indicator */
+.brk{display:inline-block;font-size:10px;font-weight:700;padding:1px 4px;border-radius:2px}
+.brk-on{background:var(--accent);color:#000}
+.brk-off{color:var(--text-faint)}
+
+/* v5: Regime banner */
+.regime-banner{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;font-size:11.5px}
+.regime-label{display:flex;align-items:center;gap:6px;font-family:'Syne',sans-serif;font-weight:600;font-size:11px;letter-spacing:.7px;text-transform:uppercase}
+.regime-dot{width:8px;height:8px;border-radius:50%}
+.regime-bull .regime-dot{background:var(--up);box-shadow:0 0 8px var(--up)}
+.regime-bear .regime-dot{background:var(--down);box-shadow:0 0 8px var(--down)}
+.regime-choppy .regime-dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.regime-lowvol .regime-dot{background:var(--blue)}
+.regime-mixed .regime-dot{background:var(--neutral)}
+.regime-unknown .regime-dot{background:var(--text-faint)}
+.regime-detail{color:var(--text-dim);font-size:10.5px}
+.tod-badge{margin-left:auto;font-size:10px;color:var(--text-dim);background:var(--bg-row);border:1px solid var(--border-soft);padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace}
+.tod-badge strong{color:var(--accent);font-weight:600}
+
+/* v5: Warning badges on tickers */
+.warn-chop{display:inline-block;margin-left:4px;width:13px;height:13px;line-height:13px;text-align:center;border-radius:50%;background:var(--down-soft);color:var(--down);font-size:9px;font-weight:700;cursor:help}
 
 /* Ticker name */
 .tkr{font-weight:700;font-size:13.5px;color:var(--text);letter-spacing:.3px}
@@ -197,7 +226,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="hdr-left">
     <div class="hdr-mark"></div>
     <span class="hdr-name">MomScanner</span>
-    <span class="hdr-sub">MOMENTUM TERMINAL v4</span>
+    <span class="hdr-sub">MOMENTUM TERMINAL v5</span>
   </div>
   <div class="hdr-right">
     <div class="pill"><span id="feedDot" class="dot-warn"></span> <strong id="feedLabel">—</strong></div>
@@ -223,17 +252,34 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="info-box" id="infoBox">
   <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Score formula &middot; Trading signals</div>
   <div class="info-body">
-    <p><strong>v4 Stability Filter:</strong> A ticker must qualify as candidate for at least N of the last M poll cycles <em>AND</em> remain in the same direction continuously for the minimum streak duration before it promotes to the Candidates list. This prevents the rapid bull/bear flipping seen on choppy days. Tune the thresholds in Settings → Stability Filter.</p>
-    <p style="margin-top:6px"><strong>Streak column:</strong> shows how long this ticker has been continuously qualifying in its current direction. Reset to 0 any time it fails a criterion or reverses direction. Trade when Streak &gt; 1:00.</p>
-    <p style="margin-top:6px"><strong>Flips column:</strong> count of state transitions today. Low = stable trend ticker. High = choppy. Colored orange when approaching warn threshold, red when exceeding it. Avoid trading tickers with high flip counts regardless of current dot color.</p>
-    <p style="margin-top:6px"><strong>Session Log:</strong> every state transition is recorded below with full context (score, price, spread, RelVol). Review after each session to learn which setups worked and which were traps. Export as CSV for analysis.</p>
-    <p style="margin-top:6px"><strong>Action dots:</strong> Solid green/red = stable candidate (passed stability filter). Hollow = tracking. Dashed+faded = warming up (&lt;3 min, unreliable).</p>
-    <p style="margin-top:6px"><strong>Score components:</strong> <code>Volume Pressure</code> (30%) uptick/downtick proxy &middot; <code>Relative Volume</code> (20%) vs 20-day avg &middot; <code>Price vs EMA</code> (20%) ATR-normalized &middot; <code>Volatility Expansion</code> (15%) range vs ATR &middot; <code>Options Activity</code> (15%) spread + OI quality</p>
+    <p><strong>v5 Time-of-Day Tuning:</strong> Thresholds auto-adapt based on market time. Strictest at the 9:30 open (lots of noise), default midday, loosest in the 3:00-4:00 close window (catches late-day moves). Disable in Settings if you prefer manual control.</p>
+    <p style="margin-top:6px"><strong>v5 Acceleration Section:</strong> A new third tier appears above Candidates during the 3:00-4:00 PM close window. Shows tickers with active <em>consolidation breakout</em> patterns (last 5 min range &gt; 1.5x the previous 25 min, with price breaking out). These are late-day moves that wouldn't qualify under standard criteria but are tradable with tight exits.</p>
+    <p style="margin-top:6px"><strong>v5 Regime Indicator:</strong> Banner at the top labels today's market (trending/choppy/low-vol) based on SPY behavior over the last 30 min. Add SPY to your scan for this to activate. On choppy days, stability requirements auto-tighten.</p>
+    <p style="margin-top:6px"><strong>v5 Momentum Type (Type column):</strong> <span class="mtype mtype-drift">DRIFT</span> steady climb, ideal for OTM options · <span class="mtype mtype-thrust">THRUST</span> sharp short move, risky entry · <span class="mtype mtype-reversal">REVR</span> direction flip, high risk/reward.</p>
+    <p style="margin-top:6px"><strong>v5 Breakout Column (Brk):</strong> "BRK" badge when consolidation breakout is active. Number (0-100) shown when building but not yet triggered. Value ≥ 60 with price outside range = active.</p>
+    <p style="margin-top:6px"><strong>v5 Bulletproof Persistence:</strong> Every transition and poll is saved to localStorage immediately. A mid-session refresh or accidental tab close will resume exactly where you left off. A heartbeat warns if a long outage is detected.</p>
+    <p style="margin-top:6px"><strong>v5 Session Summary:</strong> Click "Session Summary" in the footer (or at end of session) to generate a one-page HTML report with top candidates, flip stats, momentum-type breakdown, and regime analysis. Printable / save as PDF.</p>
+    <p style="margin-top:6px"><strong>v4 Stability &middot; Streak &middot; Flips:</strong> Tickers must qualify in 8/10 cycles AND hold direction for 60s before promoting. Streak column = current qualifying duration. Flips column = transitions today (high = choppy, avoid). Warning icon appears next to ticker name if flip count exceeds threshold.</p>
+    <p style="margin-top:6px"><strong>Score components:</strong> Volume Pressure 30% &middot; Relative Volume 20% &middot; Price vs EMA 20% &middot; Volatility Expansion 15% &middot; Options Activity 15%.</p>
   </div>
+</div>
+
+<!-- REGIME BANNER (v5) -->
+<div class="regime-banner regime-unknown" id="regimeBanner">
+  <div class="regime-label"><span class="regime-dot"></span><span id="regimeText">Regime: unknown</span></div>
+  <span class="regime-detail" id="regimeDetail">Waiting for SPY data...</span>
+  <span class="tod-badge" id="todBadge">ToD: <strong id="todRegimeText">—</strong></span>
 </div>
 
 <!-- MAIN TABLE -->
 <div class="tbl-panel">
+  <!-- Acceleration section (v5: close-window breakouts) -->
+  <div class="sec-head" id="secAccelHead" style="display:none">
+    <div class="sec-dot" style="background:var(--accent);box-shadow:0 0 6px var(--accent)"></div>
+    <span class="sec-label" style="color:var(--accent)">Acceleration · Late-Day Breakouts</span>
+    <span class="sec-sub" id="accelCount">0 detected</span>
+  </div>
+  <div id="accelBody"></div>
   <!-- Candidates section -->
   <div class="sec-head" id="secCandHead">
     <div class="sec-dot" style="background:var(--up)"></div>
@@ -245,7 +291,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="g-row g-hdr">
       <div></div><div>Ticker</div><div class="r">Last</div><div class="r">%Chg</div>
       <div class="r">Sprd%</div><div class="r">RVol</div><div class="r">Score</div>
-      <div class="c">Trend</div><div class="c">Dir</div><div class="r">&Delta;Scr</div><div class="r">Streak</div><div class="r">Flips</div><div class="r">Min</div>
+      <div class="c">Trend</div><div class="c">Dir</div><div class="r">&Delta;Scr</div><div class="r">Streak</div><div class="c">Type</div><div class="r">Brk</div><div class="r">Flips</div><div class="r">Min</div>
     </div>
     <div id="candBody"></div>
     <!-- Watching section -->
@@ -263,6 +309,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="foot">
     <div style="display:flex;gap:6px">
       <button class="btn" onclick="exportActiveCSV()" style="font-size:10px;padding:3px 8px">Export CSV</button>
+      <button class="btn" onclick="generateSummary()" style="font-size:10px;padding:3px 8px">Session Summary</button>
     </div>
     <span id="footStatus">Penny Pilot ON &middot; Spread max 15%</span>
   </div>
@@ -369,6 +416,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 
   <div class="sg">
+    <h4>Time-of-Day Tuning (v5)</h4>
+    <div class="fld"><label class="chk-row"><input type="checkbox" id="todEnabled" checked/><span>Enable adaptive thresholds by time of day</span></label></div>
+    <div style="font-size:9.5px;color:var(--text-faint);line-height:1.5;margin-top:6px">
+      When enabled, MomScanner applies different score/streak thresholds in each market window:<br>
+      <strong>Open 9:30–10:00</strong>: strictest (score 80, streak 90s) — avoid open noise<br>
+      <strong>Midday 10:00–15:00</strong>: default (score 75, streak 60s)<br>
+      <strong>Close 15:00–16:00</strong>: loosest (score 65, streak 20s) — catch late-day moves like INTC's 3:30pm run
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="saveTodSettings()">Save ToD</button></div>
+  </div>
+
+  <div class="sg">
     <h4>Stability Filter (v4)</h4>
     <div class="fld"><label>Stability Window (# of cycles)</label><div class="rng-row"><input type="range" min="5" max="20" id="stabWindow" value="10"/><span class="rng-val" id="stabWindowVal">10</span></div></div>
     <div class="fld"><label>Min Qualifying Cycles</label><div class="rng-row"><input type="range" min="3" max="20" id="stabMinQual" value="8"/><span class="rng-val" id="stabMinQualVal">8</span></div></div>
@@ -393,11 +452,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="toast-c" id="toastContainer"></div>
 
 <script>
-const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'ms_schwab_key',schwabSecret:'ms_schwab_secret',schwabCallback:'ms_schwab_callback',schwabToken:'ms_schwab_token',feed:'ms_feed',weights:'ms_weights',behavior:'ms_behavior',optionsFilter:'ms_options_filter',stability:'ms_stability',history:'ms_history_v1',activeTickers:'ms_active_tickers',transitions:'ms_transitions_v1'};
+const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'ms_schwab_key',schwabSecret:'ms_schwab_secret',schwabCallback:'ms_schwab_callback',schwabToken:'ms_schwab_token',feed:'ms_feed',weights:'ms_weights',behavior:'ms_behavior',optionsFilter:'ms_options_filter',stability:'ms_stability',history:'ms_history_v1',activeTickers:'ms_active_tickers',transitions:'ms_transitions_v1',activeState:'ms_active_state_v5',heartbeat:'ms_heartbeat_v5',sessionSummaries:'ms_summaries_v5',regimeSettings:'ms_regime_v5',todSettings:'ms_tod_v5'};
 
 const PENNY_PILOT=new Set(['AAPL','MSFT','AMZN','GOOGL','GOOG','META','NVDA','TSLA','NFLX','ADBE','CRM','ORCL','CSCO','INTC','AMD','QCOM','AVGO','TXN','MU','AMAT','LRCX','KLAC','ASML','ARM','SPY','QQQ','IWM','DIA','XLF','XLE','XLK','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','SMH','SOXX','SOXL','SOXS','TQQQ','SQQQ','UVXY','VXX','SVXY','TLT','TBT','GLD','SLV','USO','UNG','EEM','EFA','FXI','EWZ','INDA','HYG','JNK','LQD','AGG','VTI','VOO','VTV','VUG','ARKK','ARKQ','ARKW','ARKG','ARKF','MAGS','IBIT','FBTC','ETHA','SPXL','SPXS','TNA','TZA','LABU','LABD','FAS','FAZ','JPM','BAC','WFC','C','GS','MS','BRK.B','V','MA','AXP','PYPL','SQ','BLK','SCHW','COF','USB','PNC','TFC','MET','PRU','AIG','AFL','ALL','TRV','CB','COIN','HOOD','SOFI','AFRM','UPST','LMND','WMT','COST','TGT','HD','LOW','NKE','SBUX','MCD','CMG','DIS','LULU','ULTA','ROST','TJX','BBY','KSS','M','GPS','DKS','DG','DLTR','FL','ANF','AEO','BURL','GE','CAT','DE','BA','LMT','RTX','NOC','GD','HON','MMM','UPS','FDX','UNP','CSX','NSC','F','GM','RIVN','LCID','NIO','XPEV','LI','FSR','NKLA','CCL','RCL','NCLH','AAL','UAL','DAL','LUV','XOM','CVX','COP','OXY','SLB','HAL','EOG','PXD','MRO','DVN','APA','HES','FANG','PSX','VLO','MPC','JNJ','PFE','MRK','LLY','ABBV','BMY','GILD','AMGN','BIIB','REGN','VRTX','MRNA','BNTX','NVAX','PLUG','FCEL','SAVA','UNH','CVS','CI','HUM','ANTM','HCA','TMO','DHR','ABT','MDT','SYK','BSX','ISRG','ZTS','HOLX','IDXX','DXCM','PODD','IQV','T','VZ','TMUS','CHTR','CMCSA','DISH','PARA','WBD','FOX','FOXA','ROKU','SPOT','SHOP','EBAY','ETSY','PINS','SNAP','UBER','LYFT','ABNB','DASH','BKNG','EXPE','TRIP','DKNG','PENN','CZR','WYNN','MGM','LVS','RBLX','EA','TTWO','ATVI','U','DDOG','NET','SNOW','CRWD','ZS','PANW','FTNT','OKTA','PLTR','TEAM','MDB','DOCU','ZM','WORK','SPLK','TWLO','ESTC','CFLT','GTLB','AMT','PLD','CCI','EQIX','DLR','O','SPG','AVB','EQR','WELL','PSA','VICI','VTR','SBAC','SO','NEE','DUK','D','AEP','EXC','SRE','XEL','PCG','ED','EIX','PEG','WEC','ES','ETR','DTE','PPL','CMS','AES','AEE','FCX','NEM','GOLD','AA','X','CLF','MT','VALE','RIO','BHP','SCCO','STLD','NUE','CF','MOS','FMC','LIN','APD','SHW','ECL','PPG','DD','DOW','LYB','CE','ALB','WRB','BABA','JD','PDD','BIDU','NTES','TCOM','TME','VIPS','BILI','IQ','TAL','EDU','YMM','DIDI','BZ','ZH','MNSO','TIGR','FUTU','DQ','JKS','CSIQ','BEKE','GME','AMC','BBBY','BB','NOK','WISH','CLOV','WKHS','TLRY','CGC','ACB','SNDL','HEXO','APHA','CRON','MARA','RIOT','CLSK','HUT','BITF','BTBT','CAN','CIFR','WULF','APLD','HIVE','GREE','SMCI','VRT','POWL','BE','FLNC','STEM','CHPT','BLNK','EVGO','WKSP','GOEV','RIDE','HYLN','QS','MVIS','LAZR','VLDR','INVZ','OUST','IBM','HPQ','HPE','DELL','STX','WDC','NTAP','ANET','ZBRA','JNPR','MRVL','ADI','NXPI','ON','SWKS','QRVO','TER','ACLS','AEHR','RMBS','SITM','WOLF','CRDO','NVTS','IOT','SPT','BOX','DBX','HUBS','NOW','WDAY','INTU','ADP','PAYX','PAYC','CDAY','PCTY','FICO','FDS','MORN','MCO','SPGI','VRSK','BR','IT','ACN','CTSH','INFY','WIT','EPAM','GLOB','EXLS','FIS','FISV','GPN','WU','DFS','SYF','ALLY','CIT','NAVI','SLM','LEND']);
 
-const state={active:new Map(),history:{},transitions:[],paused:false,countdown:0,refreshIntervalSec:5,schwabAccessToken:null,lastFeedStatus:'idle',priceHistory:new Map(),scoreHistory:new Map()};
+const state={active:new Map(),history:{},transitions:[],paused:false,countdown:0,refreshIntervalSec:5,schwabAccessToken:null,lastFeedStatus:'idle',priceHistory:new Map(),scoreHistory:new Map(),regime:'unknown',regimeConfidence:0,spyHistory:[],sessionStart:null,sessionDate:null};
 
 function lsGet(k,d=null){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Storage error: '+e.message,'err')}}
@@ -435,16 +494,171 @@ function loadStability(){const s=lsGet(LS_KEYS.stability,{window:10,minQual:8,mi
 function refreshStabilityLabels(){qs('stabWindowVal').textContent=qs('stabWindow').value;qs('stabMinQualVal').textContent=qs('stabMinQual').value;qs('stabMinStreakVal').textContent=qs('stabMinStreak').value+'s';qs('stabFlipWarnVal').textContent=qs('stabFlipWarn').value}
 function getStability(){return lsGet(LS_KEYS.stability,{window:10,minQual:8,minStreak:60,flipWarn:8})}
 
+// ---- v5 TIME-OF-DAY TUNING ----
+// Detects ET time and returns a regime identifier. Caller applies overlays to base settings.
+function getTimeOfDayRegime(){
+  const now=new Date();
+  // Convert to ET using toLocaleString
+  const etStr=now.toLocaleString('en-US',{timeZone:'America/New_York',hour12:false,hour:'2-digit',minute:'2-digit'});
+  const [h,m]=etStr.split(':').map(Number);
+  const mins=h*60+m;
+  // Market hours 9:30-16:00 ET = 570-960
+  if(mins<570||mins>=960)return'closed';
+  if(mins<600)return'open'; // 9:30-10:00
+  if(mins<780)return'midday-early'; // 10:00-13:00
+  if(mins<900)return'midday-late'; // 13:00-15:00
+  return'close-window'; // 15:00-16:00
+}
+
+function getTodSettings(){return lsGet(LS_KEYS.todSettings,{enabled:true,
+  open:{highThresh:80,smoothLag:90,minStreak:90,minQual:9},
+  'midday-early':{highThresh:75,smoothLag:60,minStreak:60,minQual:8},
+  'midday-late':{highThresh:75,smoothLag:60,minStreak:60,minQual:8},
+  'close-window':{highThresh:65,smoothLag:20,minStreak:20,minQual:6},
+  closed:{highThresh:75,smoothLag:60,minStreak:60,minQual:8}
+})}
+function saveTodSettings(){
+  const tod=getTodSettings();
+  tod.enabled=qs('todEnabled').checked;
+  lsSet(LS_KEYS.todSettings,tod);
+  toast('Time-of-day tuning saved','ok');
+}
+function loadTodSettings(){
+  const tod=getTodSettings();
+  qs('todEnabled').checked=tod.enabled!==false;
+}
+
+// Effective settings that incorporate ToD overlay + regime adjustments
+function getEffectiveBehavior(){
+  const base=getBehavior();
+  const tod=getTodSettings();
+  if(!tod.enabled)return base;
+  const regime=getTimeOfDayRegime();
+  const overlay=tod[regime]||{};
+  return{
+    smoothLag:overlay.smoothLag??base.smoothLag,
+    highThresh:overlay.highThresh??base.highThresh,
+    lowThresh:base.lowThresh,
+    minRefresh:base.minRefresh
+  };
+}
+function getEffectiveStability(){
+  const base=getStability();
+  const tod=getTodSettings();
+  let eff={...base};
+  if(tod.enabled){
+    const regime=getTimeOfDayRegime();
+    const overlay=tod[regime]||{};
+    if(overlay.minStreak!=null)eff.minStreak=overlay.minStreak;
+    if(overlay.minQual!=null)eff.minQual=overlay.minQual;
+  }
+  // regime-based tweaks for choppy vs trending markets
+  if(state.regime==='choppy')eff.minStreak=Math.round(eff.minStreak*1.5);
+  else if(state.regime==='trending-bull'||state.regime==='trending-bear')eff.minStreak=Math.round(eff.minStreak*0.75);
+  return eff;
+}
+
 function updateFeedPill(){const f=qs('feedSelect').value,dot=qs('feedDot'),lbl=qs('feedLabel');dot.className=state.lastFeedStatus==='ok'?'dot-live':state.lastFeedStatus==='err'?'dot-err':'dot-warn';lbl.textContent=f==='tradier'?'Tradier L2':(state.schwabAccessToken?'Schwab':'Schwab (no token)')}
 
 // ---- TICKER MGMT ----
-function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null}}
+function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null,priceRangeShort:[],priceRangeLong:[],breakoutScore:0,breakoutActive:false,scoreVelocity:0,momentumType:null,peakScore:50,peakScoreAt:null,accelCandidate:false}}
 
 function addTickers(){const raw=qs('tickerInput').value,parts=raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));if(!parts.length){toast('No valid tickers','err');return}const of=getOptionsFilter();let added=0,rejected=0;const now=Date.now(),rejList=[];parts.forEach(t=>{if(of.pennyPilotOnly&&!PENNY_PILOT.has(t)){rejected++;rejList.push(t);return}if(!state.active.has(t)){state.active.set(t,makeTicker(t,now));state.priceHistory.set(t,[]);state.scoreHistory.set(t,[]);added++}});qs('tickerInput').value='';saveActiveTickers();render();let msg=`Added ${added} ticker${added!==1?'s':''}`;if(rejected)msg+=` · ${rejected} rejected (non-Penny-Pilot: ${rejList.slice(0,4).join(', ')}${rejList.length>4?'…':''})`;toast(msg,rejected>added?'err':'ok',4500)}
 
 function clearActive(){if(!confirm('Clear active scan? History is preserved.'))return;state.active.clear();state.priceHistory.clear();state.scoreHistory.clear();saveActiveTickers();render();toast('Active cleared','ok')}
-function saveActiveTickers(){lsSet(LS_KEYS.activeTickers,Array.from(state.active.keys()))}
-function restoreActiveTickers(){const arr=lsGet(LS_KEYS.activeTickers,[])||[];const now=Date.now();arr.forEach(t=>{if(!state.active.has(t)){state.active.set(t,makeTicker(t,now));state.priceHistory.set(t,[]);state.scoreHistory.set(t,[])}})}
+function saveActiveTickers(){saveFullState()}
+
+// ---- v5 BULLETPROOF PERSISTENCE ----
+// saveFullState: persists EVERYTHING — ticker state, score history, price history,
+// session metadata, regime. Called on every poll and every transition.
+function saveFullState(){
+  try{
+    const snapshot={
+      savedAt:Date.now(),
+      sessionStart:state.sessionStart,
+      sessionDate:state.sessionDate,
+      regime:state.regime,
+      regimeConfidence:state.regimeConfidence,
+      spyHistory:state.spyHistory.slice(-60), // last 60 samples
+      tickers:{}
+    };
+    state.active.forEach((d,t)=>{
+      snapshot.tickers[t]={
+        ...d,
+        priceHist:(state.priceHistory.get(t)||[]).slice(-30),
+        scoreHist:(state.scoreHistory.get(t)||[]).slice(-60)
+      };
+    });
+    lsSet(LS_KEYS.activeState,snapshot);
+    // also keep the simple ticker-list for backward compatibility
+    lsSet(LS_KEYS.activeTickers,Array.from(state.active.keys()));
+  }catch(e){console.warn('Save failed:',e.message)}
+}
+
+function heartbeat(){
+  try{lsSet(LS_KEYS.heartbeat,Date.now())}catch(e){}
+}
+
+function restoreFullState(){
+  const snap=lsGet(LS_KEYS.activeState,null);
+  if(!snap||!snap.tickers)return{restored:false,stale:false,ageMin:0};
+  const ageMs=Date.now()-(snap.savedAt||0);
+  const ageMin=ageMs/60000;
+  const todayKey=new Date().toISOString().slice(0,10);
+  // session boundary detection: reset if it's a new day or snapshot is >12 hours old
+  if(snap.sessionDate&&snap.sessionDate!==todayKey){
+    return{restored:false,stale:true,ageMin,reason:'new-day'};
+  }
+  if(ageMin>720){
+    return{restored:false,stale:true,ageMin,reason:'stale-12h'};
+  }
+  // restore!
+  state.sessionStart=snap.sessionStart||Date.now();
+  state.sessionDate=snap.sessionDate||todayKey;
+  state.regime=snap.regime||'unknown';
+  state.regimeConfidence=snap.regimeConfidence||0;
+  state.spyHistory=snap.spyHistory||[];
+  Object.keys(snap.tickers).forEach(t=>{
+    const d=snap.tickers[t];
+    // reattach — preserve firstSeen so warmup doesn't restart
+    state.active.set(t,{...d});
+    state.priceHistory.set(t,d.priceHist||[]);
+    state.scoreHistory.set(t,d.scoreHist||[]);
+  });
+  // check heartbeat gap to warn user if long outage
+  const hb=lsGet(LS_KEYS.heartbeat,0);
+  const hbAgeMin=(Date.now()-hb)/60000;
+  return{restored:true,stale:false,ageMin,hbAgeMin,tickerCount:state.active.size};
+}
+
+function restoreActiveTickers(){
+  const result=restoreFullState();
+  if(result.restored){
+    // show a toast informing the user of resumption
+    if(result.hbAgeMin>5){
+      toast(`Resumed session from ${result.ageMin.toFixed(0)} min ago. Outage detected: ${result.hbAgeMin.toFixed(0)} min since last heartbeat. Some transitions may be missing.`,'err',7000);
+    } else {
+      toast(`Resumed session: ${result.tickerCount} tickers restored`,'ok',4000);
+    }
+    return;
+  }
+  // fallback: try the old-format ticker list for users upgrading from v4
+  const arr=lsGet(LS_KEYS.activeTickers,[])||[];
+  const now=Date.now();
+  arr.forEach(t=>{
+    if(!state.active.has(t)){
+      state.active.set(t,makeTicker(t,now));
+      state.priceHistory.set(t,[]);
+      state.scoreHistory.set(t,[]);
+    }
+  });
+  // initialize session
+  state.sessionStart=now;
+  state.sessionDate=new Date().toISOString().slice(0,10);
+  if(result.stale&&arr.length){
+    toast(`Previous session is too old (${result.reason}). Started a fresh session.`,'info',5000);
+  }
+}
 
 // ---- SCORING ----
 function computeRawScore(d){
@@ -455,11 +669,124 @@ function computeRawScore(d){
   let oa=50;if(d.optOI&&d.optOI>0&&d.optSpreadPct!=null){const ss=100-Math.min(100,d.optSpreadPct*4),os=clamp(50+15*Math.log2(Math.max(.1,d.optOI/500)));oa=clamp(.6*ss+.4*os)}
   d.components={VP:vp,RV:rv,PE:pe,VE:ve,OA:oa};const w=getWeights();return clamp(vp*w.VP+rv*w.RV+pe*w.PE+ve*w.VE+oa*w.OA)
 }
-function applySmoothing(d,raw){const b=getBehavior(),tau=Math.max(5,b.smoothLag),dt=state.refreshIntervalSec,alpha=1-Math.exp(-dt/tau);d.smoothScore+=alpha*(raw-d.smoothScore);d.rawScore=raw;if(d.firstSeenScore===null&&d.lastSeen!==null)d.firstSeenScore=d.smoothScore}
+function applySmoothing(d,raw){const b=getEffectiveBehavior(),tau=Math.max(5,b.smoothLag),dt=state.refreshIntervalSec,alpha=1-Math.exp(-dt/tau);d.smoothScore+=alpha*(raw-d.smoothScore);d.rawScore=raw;if(d.firstSeenScore===null&&d.lastSeen!==null)d.firstSeenScore=d.smoothScore}
 function updateDirection(d,ticker){const hist=state.priceHistory.get(ticker)||[],now=Date.now();if(d.last!=null)hist.push({t:now,price:d.last});const cut=now-30000;while(hist.length&&hist[0].t<cut)hist.shift();state.priceHistory.set(ticker,hist);if(hist.length<2){d.direction30s=0;d.arrow='flat';return}let sum=0,cnt=0;for(let i=1;i<hist.length;i++){sum+=Math.sign(hist[i].price-hist[i-1].price);cnt++}const avg=cnt?sum/cnt:0;d.direction30s=avg;d.arrow=avg>.15?'up':avg<-.15?'down':'flat'}
 
 // ---- SPARKLINE ----
-function recordScorePoint(d,ticker){const hist=state.scoreHistory.get(ticker)||[];hist.push({t:Date.now(),s:d.smoothScore});const cut=Date.now()-5*60000;while(hist.length&&hist[0].t<cut)hist.shift();state.scoreHistory.set(ticker,hist)}
+function recordScorePoint(d,ticker){const hist=state.scoreHistory.get(ticker)||[];hist.push({t:Date.now(),s:d.smoothScore});const cut=Date.now()-5*60000;while(hist.length&&hist[0].t<cut)hist.shift();state.scoreHistory.set(ticker,hist);
+  // track peak score for session summary
+  if(d.smoothScore>d.peakScore){d.peakScore=d.smoothScore;d.peakScoreAt=Date.now()}
+}
+
+// ---- v5 CONSOLIDATION BREAKOUT DETECTOR ----
+// Compares short window (last 5 min) to long window (prev 25 min) to spot range breakouts.
+// Only relevant in close-window regime and for tickers with ≥30 min of data.
+function updateBreakoutDetection(d){
+  if(!d.last)return;
+  const now=Date.now();
+  d.priceRangeShort.push({t:now,p:d.last});
+  d.priceRangeLong.push({t:now,p:d.last});
+  // keep short = last 5 min, long = last 30 min
+  const shortCut=now-5*60000,longCut=now-30*60000;
+  while(d.priceRangeShort.length&&d.priceRangeShort[0].t<shortCut)d.priceRangeShort.shift();
+  while(d.priceRangeLong.length&&d.priceRangeLong[0].t<longCut)d.priceRangeLong.shift();
+  // need at least 25 min of data to assess
+  if(d.priceRangeLong.length<10||d.priceRangeShort.length<3){d.breakoutScore=0;d.breakoutActive=false;return}
+  // compute long-window "consolidation" range (excluding the short window, so baseline is the "quiet" period)
+  const longOnly=d.priceRangeLong.filter(p=>p.t<shortCut);
+  if(longOnly.length<8){d.breakoutScore=0;d.breakoutActive=false;return}
+  const longPrices=longOnly.map(p=>p.p);
+  const shortPrices=d.priceRangeShort.map(p=>p.p);
+  const longMin=Math.min(...longPrices),longMax=Math.max(...longPrices);
+  const longRange=longMax-longMin;
+  const longAvg=longPrices.reduce((a,b)=>a+b,0)/longPrices.length;
+  const shortMin=Math.min(...shortPrices),shortMax=Math.max(...shortPrices);
+  const shortRange=shortMax-shortMin;
+  const shortLast=shortPrices[shortPrices.length-1];
+  // Breakout conditions:
+  // 1. Short-window range is >= 1.5x long-window range (volatility expansion)
+  // 2. Current price is outside the long-window range (breaking out)
+  // 3. Non-trivial absolute move
+  if(longRange<=0){d.breakoutScore=0;d.breakoutActive=false;return}
+  const rangeRatio=shortRange/longRange;
+  const pxOutsideHigh=shortLast>longMax;
+  const pxOutsideLow=shortLast<longMin;
+  const pxOutside=pxOutsideHigh||pxOutsideLow;
+  const moveFromAvg=Math.abs(shortLast-longAvg)/longAvg;
+  // Score 0-100
+  let bScore=0;
+  if(rangeRatio>=1.5)bScore+=30;
+  if(rangeRatio>=2.5)bScore+=20;
+  if(pxOutside)bScore+=30;
+  if(moveFromAvg>=0.005)bScore+=10; // at least 0.5% from consolidation avg
+  if(moveFromAvg>=0.015)bScore+=10;
+  d.breakoutScore=bScore;
+  d.breakoutActive=(bScore>=60&&pxOutside);
+  // direction of breakout
+  d.breakoutDir=pxOutsideHigh?'up':pxOutsideLow?'down':'flat';
+}
+
+// ---- v5 MOMENTUM TYPE CLASSIFIER ----
+// Looks at score velocity and duration to tag tickers as THRUST / DRIFT / REVERSAL
+function updateMomentumType(d,ticker){
+  const hist=state.scoreHistory.get(ticker)||[];
+  if(hist.length<6){d.momentumType=null;d.scoreVelocity=0;return}
+  const now=Date.now();
+  // velocity: score change over last 2 min
+  const recent=hist.filter(p=>p.t>now-2*60000);
+  if(recent.length<2){d.momentumType=null;d.scoreVelocity=0;return}
+  const velScore=recent[recent.length-1].s-recent[0].s;
+  const velMin=(recent[recent.length-1].t-recent[0].t)/60000;
+  d.scoreVelocity=velMin>0?velScore/velMin:0; // points per minute
+  // look at broader 5-min window for duration/sustainability
+  const longer=hist;
+  const longerSpanMin=(longer[longer.length-1].t-longer[0].t)/60000;
+  const totalGain=longer[longer.length-1].s-longer[0].s;
+  // Classification
+  if(d.currentState!=='bull'&&d.currentState!=='bear'){d.momentumType=null;return}
+  // THRUST: high velocity in a short window, score jumped fast
+  if(Math.abs(d.scoreVelocity)>=8&&Math.abs(totalGain)>=12){d.momentumType='thrust';return}
+  // REVERSAL: current state opposite to peak in recent past, or flipCount > 0
+  if(d.flipCount>=2){d.momentumType='reversal';return}
+  // DRIFT: steady climb over longer window
+  if(longerSpanMin>=3&&Math.abs(totalGain)>=6&&Math.abs(d.scoreVelocity)<8){d.momentumType='drift';return}
+  // default
+  d.momentumType='drift';
+}
+
+// ---- v5 MARKET REGIME DETECTION (from SPY movement) ----
+// Samples SPY via the regular quote feed when it's in the active list, otherwise uses its own sampling.
+// Updates state.regime: 'trending-bull' | 'trending-bear' | 'choppy' | 'low-vol'
+function updateRegime(){
+  // use SPY from active map if present
+  const spy=state.active.get('SPY');
+  if(!spy||!spy.last)return;
+  const now=Date.now();
+  state.spyHistory.push({t:now,p:spy.last,pct:spy.pctChg});
+  const cut=now-30*60000; // 30-min rolling window
+  while(state.spyHistory.length&&state.spyHistory[0].t<cut)state.spyHistory.shift();
+  if(state.spyHistory.length<6){state.regime='unknown';return}
+  const prices=state.spyHistory.map(h=>h.p);
+  const mn=Math.min(...prices),mx=Math.max(...prices),first=prices[0],last=prices[prices.length-1];
+  const netMove=(last-first)/first;
+  const rangePct=(mx-mn)/first;
+  // count direction changes: each point vs previous, sign of delta
+  let flips=0,prevSign=0;
+  for(let i=1;i<prices.length;i++){
+    const sign=Math.sign(prices[i]-prices[i-1]);
+    if(sign!==0&&prevSign!==0&&sign!==prevSign)flips++;
+    if(sign!==0)prevSign=sign;
+  }
+  // Classification
+  if(rangePct<0.003&&Math.abs(netMove)<0.002){state.regime='low-vol';state.regimeConfidence=0.9;return}
+  if(Math.abs(netMove)>=0.006&&flips<=Math.floor(prices.length/4)){
+    state.regime=netMove>0?'trending-bull':'trending-bear';
+    state.regimeConfidence=Math.min(1,Math.abs(netMove)/0.012);
+    return;
+  }
+  if(flips>=Math.floor(prices.length/2.5)){state.regime='choppy';state.regimeConfidence=0.85;return}
+  state.regime='mixed';state.regimeConfidence=0.5;
+}
 
 function renderSparkline(ticker,arrow){
   const hist=state.scoreHistory.get(ticker)||[];
@@ -502,7 +829,7 @@ function connectSchwab(){const k=qs('schwabKey').value.trim(),cb=qs('schwabCallb
 async function handleSchwabCallback(){const p=new URLSearchParams(location.search),code=p.get('code');if(!code)return;const k=lsGet(LS_KEYS.schwabKey,''),s=lsGet(LS_KEYS.schwabSecret,''),cb=lsGet(LS_KEYS.schwabCallback,'');if(!k||!s){toast('Missing Schwab creds','err');return}try{const r=await fetch('https://api.schwabapi.com/v1/oauth/token',{method:'POST',headers:{'Authorization':'Basic '+btoa(k+':'+s),'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`});if(!r.ok)throw new Error('Token HTTP '+r.status);const t=await r.json();lsSet(LS_KEYS.schwabToken,t);state.schwabAccessToken=t.access_token;history.replaceState({},document.title,cb);toast('Schwab connected','ok');updateFeedPill()}catch(e){toast('Schwab OAuth failed: '+e.message,'err')}}
 
 // ---- POLL LOOP ----
-async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateDirection(d,t);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d);updateStability(d)});state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
+async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateDirection(d,t);updateBreakoutDetection(d);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d);updateStability(d);updateMomentumType(d,t)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
 
 // ---- HISTORY ----
 function recordHistory(d){const h=state.history[d.ticker]||{ticker:d.ticker,firstSeen:d.firstSeen,lastSeen:d.lastSeen,obsCount:0,peak:d.smoothScore,low:d.smoothScore,last:d.smoothScore,priceLast:d.last};h.lastSeen=d.lastSeen;h.obsCount++;h.peak=Math.max(h.peak,d.smoothScore);h.low=Math.min(h.low,d.smoothScore);h.last=d.smoothScore;h.priceLast=d.last;state.history[d.ticker]=h;if(h.obsCount%5===0)lsSet(LS_KEYS.history,state.history)}
@@ -523,23 +850,190 @@ function logTransition(ticker,fromState,toState,d){
     spreadPct:d.optSpreadPct?.toFixed(2),
     oi:d.optOI,
     arrow:d.arrow,
-    relVol:d.relVol?.toFixed(2)
+    relVol:d.relVol?.toFixed(2),
+    momentumType:d.momentumType||'',
+    regime:state.regime||'unknown',
+    breakout:d.breakoutActive?1:0
   };
   state.transitions.push(entry);
-  // cap memory at 5000 entries, persist periodically
   if(state.transitions.length>5000)state.transitions.shift();
-  if(state.transitions.length%20===0)lsSet(LS_KEYS.transitions,state.transitions.slice(-2000));
+  // v5: save EVERY transition, not every 20 — zero tolerance for data loss
+  lsSet(LS_KEYS.transitions,state.transitions.slice(-2000));
   renderTransitionLog();
 }
 function loadTransitionsFromStorage(){state.transitions=lsGet(LS_KEYS.transitions,[])||[];renderTransitionLog();toast('Transitions loaded','ok')}
 function clearTransitions(){if(!confirm('Clear entire transition log? Cannot undo.'))return;state.transitions=[];lsSet(LS_KEYS.transitions,[]);renderTransitionLog();toast('Transitions cleared','ok')}
 
 function exportTransitionsCSV(){
-  const rows=[['Timestamp','Ticker','From','To','SmoothScore','RawScore','Price','PctChg','SpreadPct','OI','Arrow','RelVol']];
+  const rows=[['Timestamp','Ticker','From','To','SmoothScore','RawScore','Price','PctChg','SpreadPct','OI','Arrow','RelVol','MomentumType','Regime','Breakout']];
   state.transitions.forEach(e=>{
-    rows.push([new Date(e.t).toISOString(),e.ticker,e.from,e.to,e.score,e.rawScore,e.price,e.pctChg,e.spreadPct,e.oi,e.arrow,e.relVol]);
+    rows.push([new Date(e.t).toISOString(),e.ticker,e.from,e.to,e.score,e.rawScore,e.price,e.pctChg,e.spreadPct,e.oi,e.arrow,e.relVol,e.momentumType||'',e.regime||'',e.breakout||0]);
   });
   dlCSV('momscanner_transitions_'+Date.now()+'.csv',rows);
+}
+
+// ---- v5 END-OF-SESSION SUMMARY ----
+function generateSummary(){
+  const now=Date.now();
+  const todayKey=new Date().toISOString().slice(0,10);
+  const sessionStart=state.sessionStart||now;
+  const sessionMin=((now-sessionStart)/60000).toFixed(0);
+  const tickers=Array.from(state.active.values());
+  const trans=state.transitions;
+
+  // Compute per-ticker candidate-time stats
+  const candidateTime={}; // ticker -> {totalMs, sessions[], peakScore}
+  const openSince={};
+  trans.forEach(e=>{
+    if(e.to==='bull'||e.to==='bear'){
+      openSince[e.ticker]={t:e.t,dir:e.to};
+    } else if((e.from==='bull'||e.from==='bear')&&openSince[e.ticker]){
+      const dur=e.t-openSince[e.ticker].t;
+      if(!candidateTime[e.ticker])candidateTime[e.ticker]={totalMs:0,sessions:[],dirs:[]};
+      candidateTime[e.ticker].totalMs+=dur;
+      candidateTime[e.ticker].sessions.push(dur);
+      candidateTime[e.ticker].dirs.push(openSince[e.ticker].dir);
+      delete openSince[e.ticker];
+    }
+  });
+  // close out still-open candidacies
+  Object.keys(openSince).forEach(t=>{
+    const dur=now-openSince[t].t;
+    if(!candidateTime[t])candidateTime[t]={totalMs:0,sessions:[],dirs:[]};
+    candidateTime[t].totalMs+=dur;
+    candidateTime[t].sessions.push(dur);
+    candidateTime[t].dirs.push(openSince[t].dir);
+  });
+
+  // enrich with peak score from active data
+  tickers.forEach(d=>{
+    if(candidateTime[d.ticker]){
+      candidateTime[d.ticker].peakScore=d.peakScore;
+      candidateTime[d.ticker].momentumType=d.momentumType;
+      candidateTime[d.ticker].pctChg=d.pctChg;
+      candidateTime[d.ticker].flipCount=d.flipCount;
+    }
+  });
+
+  // top 10 by total candidate time
+  const topByTime=Object.entries(candidateTime)
+    .sort((a,b)=>b[1].totalMs-a[1].totalMs)
+    .slice(0,10);
+
+  // most-flipped
+  const flipsPerTicker={};
+  trans.forEach(e=>{flipsPerTicker[e.ticker]=(flipsPerTicker[e.ticker]||0)+1});
+  const mostFlipped=Object.entries(flipsPerTicker).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // momentum-type breakdown
+  const typeCounts={drift:0,thrust:0,reversal:0};
+  tickers.forEach(d=>{if(d.momentumType)typeCounts[d.momentumType]=(typeCounts[d.momentumType]||0)+1});
+
+  // regime breakdown (approximated from transitions)
+  const regimeCounts={};
+  trans.forEach(e=>{if(e.regime)regimeCounts[e.regime]=(regimeCounts[e.regime]||0)+1});
+
+  // promotions/demotions totals
+  const promotions=trans.filter(e=>(e.to==='bull'||e.to==='bear')&&e.from!=='bull'&&e.from!=='bear').length;
+  const demotions=trans.filter(e=>(e.from==='bull'||e.from==='bear')&&e.to!=='bull'&&e.to!=='bear').length;
+  const durations=[];
+  Object.values(candidateTime).forEach(ct=>ct.sessions.forEach(d=>durations.push(d)));
+  const avgDurMin=durations.length?(durations.reduce((a,b)=>a+b,0)/durations.length/60000).toFixed(1):'0.0';
+  const maxDurMin=durations.length?(Math.max(...durations)/60000).toFixed(1):'0.0';
+
+  // peak score across all tickers
+  const peakOverall=tickers.reduce((a,d)=>Math.max(a,d.peakScore||0),0);
+
+  // save summary to localStorage (keyed by date)
+  const summary={
+    date:todayKey,
+    sessionStart:sessionStart,
+    sessionEnd:now,
+    sessionMin:+sessionMin,
+    tickerCount:tickers.length,
+    transitionCount:trans.length,
+    promotions,demotions,
+    avgDurMin:+avgDurMin,
+    maxDurMin:+maxDurMin,
+    topByTime,mostFlipped,typeCounts,regimeCounts,
+    peakOverall
+  };
+  const summaries=lsGet(LS_KEYS.sessionSummaries,{})||{};
+  summaries[todayKey]=summary;
+  lsSet(LS_KEYS.sessionSummaries,summaries);
+
+  // render as HTML in a new window
+  const html=renderSummaryHTML(summary);
+  const w=window.open('','_blank');
+  if(!w){toast('Popup blocked — allow popups for this site','err',5000);return}
+  w.document.write(html);
+  w.document.close();
+  toast('Session summary generated','ok');
+}
+
+function renderSummaryHTML(s){
+  const d=new Date(s.sessionStart),ed=new Date(s.sessionEnd);
+  const rows=s.topByTime.map(([tkr,data])=>{
+    const mins=(data.totalMs/60000).toFixed(1);
+    const dirs=[...new Set(data.dirs)].join('+');
+    const sessCount=data.sessions.length;
+    const avgSess=(data.totalMs/sessCount/60000).toFixed(1);
+    return`<tr><td><strong>${tkr}</strong></td><td>${mins}m</td><td>${sessCount}</td><td>${avgSess}m</td><td>${dirs}</td><td>${data.peakScore?.toFixed(0)||'—'}</td><td>${data.momentumType||'—'}</td><td>${data.pctChg??'—'}%</td><td>${data.flipCount||0}</td></tr>`;
+  }).join('');
+  const flipRows=s.mostFlipped.map(([t,n])=>`<tr><td><strong>${t}</strong></td><td>${n}</td></tr>`).join('');
+  const regimeRows=Object.entries(s.regimeCounts).map(([r,n])=>`<tr><td>${r}</td><td>${n}</td></tr>`).join('');
+  return`<!doctype html><html><head><meta charset="utf-8"><title>MomScanner Session Summary ${s.date}</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#0a0e12;color:#d9e2ec;max-width:900px;margin:20px auto;padding:20px;line-height:1.5}
+h1{font-size:22px;color:#ffaa00;border-bottom:2px solid #253040;padding-bottom:10px}
+h2{font-size:15px;color:#8895a7;margin-top:24px;margin-bottom:10px;letter-spacing:1px;text-transform:uppercase}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:15px 0}
+.stat{background:#121820;border:1px solid #253040;padding:10px 14px;border-radius:4px}
+.stat-lbl{font-size:10px;color:#4a5a6e;text-transform:uppercase;letter-spacing:1px}
+.stat-val{font-size:22px;font-weight:700;color:#ffaa00;margin-top:2px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+th{text-align:left;padding:8px;background:#1a2230;border-bottom:1px solid #253040;color:#8895a7;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:7px 8px;border-bottom:1px solid #1c2633}
+tr:hover{background:#1a2230}
+.meta{color:#4a5a6e;font-size:12px}
+.print-btn{background:#ffaa00;color:#000;border:none;padding:8px 18px;border-radius:3px;font-weight:600;cursor:pointer;margin-top:20px}
+@media print{.print-btn{display:none}}
+</style></head><body>
+<h1>MomScanner Session Summary · ${s.date}</h1>
+<div class="meta">Session: ${d.toLocaleTimeString()} — ${ed.toLocaleTimeString()} · ${s.sessionMin} minutes</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-lbl">Tickers Tracked</div><div class="stat-val">${s.tickerCount}</div></div>
+  <div class="stat"><div class="stat-lbl">Total Transitions</div><div class="stat-val">${s.transitionCount}</div></div>
+  <div class="stat"><div class="stat-lbl">Promotions</div><div class="stat-val">${s.promotions}</div></div>
+  <div class="stat"><div class="stat-lbl">Demotions</div><div class="stat-val">${s.demotions}</div></div>
+  <div class="stat"><div class="stat-lbl">Avg Candidate Time</div><div class="stat-val">${s.avgDurMin}m</div></div>
+  <div class="stat"><div class="stat-lbl">Longest Candidate</div><div class="stat-val">${s.maxDurMin}m</div></div>
+  <div class="stat"><div class="stat-lbl">Peak Score</div><div class="stat-val">${s.peakOverall.toFixed(0)}</div></div>
+  <div class="stat"><div class="stat-lbl">Drift / Thrust / Rev</div><div class="stat-val" style="font-size:16px">${s.typeCounts.drift||0} / ${s.typeCounts.thrust||0} / ${s.typeCounts.reversal||0}</div></div>
+</div>
+
+<h2>Top 10 Longest-Running Candidates</h2>
+${rows?`<table><thead><tr><th>Ticker</th><th>Total Time</th><th>Sessions</th><th>Avg/Session</th><th>Direction</th><th>Peak</th><th>Type</th><th>%Chg</th><th>Flips</th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="meta">No candidates promoted today.</p>'}
+
+<h2>Most-Flipped Tickers (Avoid These)</h2>
+${flipRows?`<table><thead><tr><th>Ticker</th><th>Transitions</th></tr></thead><tbody>${flipRows}</tbody></table>`:'<p class="meta">No flipping detected.</p>'}
+
+<h2>Market Regime Breakdown (by transition)</h2>
+${regimeRows?`<table><thead><tr><th>Regime</th><th>Transitions</th></tr></thead><tbody>${regimeRows}</tbody></table>`:'<p class="meta">No regime data recorded.</p>'}
+
+<h2>Key Takeaways</h2>
+<ul style="font-size:13px;line-height:1.8">
+  ${+s.avgDurMin<1?'<li><strong>Candidate durations were short (&lt;1 min avg).</strong> Today was choppy. Consider tightening stability settings for tomorrow if similar conditions.</li>':''}
+  ${+s.avgDurMin>=3?'<li><strong>Candidates held for 3+ min on average.</strong> Trending day — your stability settings worked well.</li>':''}
+  ${s.promotions===0?'<li><strong>Zero promotions today.</strong> Either the market was truly flat, or settings are too strict. Check regime detection.</li>':''}
+  ${s.typeCounts.drift>s.typeCounts.thrust?'<li>Dominated by <strong>DRIFT</strong> momentum — ideal for your OTM options strategy.</li>':''}
+  ${s.typeCounts.thrust>s.typeCounts.drift?'<li>Dominated by <strong>THRUST</strong> momentum — moves were fast and short-lived. Harder entries.</li>':''}
+  ${s.mostFlipped.length>0&&s.mostFlipped[0][1]>=6?`<li>Most-flipped ticker: <strong>${s.mostFlipped[0][0]}</strong> (${s.mostFlipped[0][1]} transitions). Note for tomorrow: this symbol was indecisive.</li>`:''}
+</ul>
+
+<button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</body></html>`;
 }
 
 // ---- CSV ----
@@ -553,7 +1047,7 @@ function exportHistoryCSV(){const rows=[['Ticker','FirstSeen','LastSeen','ObsCou
 // Stage 1: Does this ticker meet the 6 criteria RIGHT NOW (raw qualification)?
 // Returns 'bull', 'bear', 'watch', or 'warmup'
 function rawQualify(d){
-  const b=getBehavior(),minSeen=(Date.now()-d.firstSeen)/60000;
+  const b=getEffectiveBehavior(),minSeen=(Date.now()-d.firstSeen)/60000;
   if(minSeen<3)return'warmup';
   const score=d.smoothScore??50,delta=(d.firstSeenScore!=null)?d.rawScore-d.firstSeenScore:0;
   const spreadOK=d.optSpreadPct!=null?d.optSpreadPct<=5:false;
@@ -569,7 +1063,7 @@ function rawQualify(d){
 // Update the stability window + streak state + flip count.
 // Called once per poll cycle per ticker.
 function updateStability(d){
-  const stab=getStability();
+  const stab=getEffectiveStability();
   const rawState=rawQualify(d);
   // push into rolling window
   d.stabilityWindow.push(rawState);
@@ -642,19 +1136,52 @@ function renderActive(){
   // filter hidden (options liquidity)
   const visible=allArr.filter(d=>{if(d.optSpreadPct!=null&&d.optSpreadPct>of.maxSpreadPct)return false;if(d.optOI!=null&&d.optOI>0&&d.optOI<of.minOptOI)return false;return true});
   const hidden=allArr.length-visible.length;
-  // classify for display using v4 persisted state (updated in pollOnce)
-  const candidates=[],watching=[];
-  visible.forEach(d=>{const c=d.currentState||'warmup';d._class=c;if(c==='bull'||c==='bear')candidates.push(d);else watching.push(d)});
+  // classify into three tiers: accel (breakout), candidates (stable bull/bear), watching
+  const todRegime=getTimeOfDayRegime();
+  const accelEligible=(todRegime==='close-window'); // only during 3-4 PM
+  const accel=[],candidates=[],watching=[];
+  visible.forEach(d=>{
+    const c=d.currentState||'warmup';
+    d._class=c;
+    // acceleration check: is this a breakout in the close window?
+    // A ticker is "accel" if breakoutActive AND not already in bull/bear candidate status
+    // (so we don't double-show a ticker that's already in Candidates)
+    if(accelEligible&&d.breakoutActive&&(c==='watch'||c==='warmup')){
+      d._accel=true;
+      accel.push(d);
+    } else if(c==='bull'||c==='bear'){
+      d._accel=false;
+      candidates.push(d);
+    } else {
+      d._accel=false;
+      watching.push(d);
+    }
+  });
   // sort each group
   const sorter=(a,b)=>{const ds=(b.smoothScore??0)-(a.smoothScore??0);if(Math.abs(ds)>.01)return ds;return(a.optSpreadPct??999)-(b.optSpreadPct??999)};
-  candidates.sort(sorter);watching.sort(sorter);
+  const accelSorter=(a,b)=>{const ds=(b.breakoutScore??0)-(a.breakoutScore??0);if(ds!==0)return ds;return(a.optSpreadPct??999)-(b.optSpreadPct??999)};
+  accel.sort(accelSorter);candidates.sort(sorter);watching.sort(sorter);
   // empty state
-  if(allArr.length===0){qs('candBody').innerHTML='';qs('watchBody').innerHTML='';qs('emptyState').style.display='block';qs('secCandHead').style.display='none';qs('secWatchHead').style.display='none';return}
+  if(allArr.length===0){qs('candBody').innerHTML='';qs('watchBody').innerHTML='';qs('accelBody').innerHTML='';qs('emptyState').style.display='block';qs('secCandHead').style.display='none';qs('secWatchHead').style.display='none';qs('secAccelHead').style.display='none';return}
   qs('emptyState').style.display='none';qs('secCandHead').style.display='flex';qs('secWatchHead').style.display='flex';
+  // show/hide acceleration section based on ToD and content
+  if(accelEligible&&accel.length>0){
+    qs('secAccelHead').style.display='flex';
+    qs('accelCount').textContent=`${accel.length} detected`;
+    qs('accelBody').innerHTML=accel.map(d=>renderRow(d)).join('');
+  } else if(accelEligible){
+    qs('secAccelHead').style.display='flex';
+    qs('accelCount').textContent=`0 detected · close-window active`;
+    qs('accelBody').innerHTML='<div style="padding:10px 14px;color:var(--text-faint);font-size:11px">Monitoring for consolidation breakouts...</div>';
+  } else {
+    qs('secAccelHead').style.display='none';
+    qs('accelBody').innerHTML='';
+  }
   qs('candCount').textContent=`${candidates.length} actionable`;
   qs('watchCount').textContent=`${watching.length} tracking${hidden?' · '+hidden+' hidden':''}`;
   qs('candBody').innerHTML=candidates.length?candidates.map(d=>renderRow(d)).join(''):'<div style="padding:12px 14px;color:var(--text-faint);font-size:11px">No candidates yet — waiting for scores to qualify</div>';
   qs('watchBody').innerHTML=watching.length?watching.map(d=>renderRow(d)).join(''):'';
+  updateRegimeBanner();
 }
 
 function renderRow(d){
@@ -662,18 +1189,21 @@ function renderRow(d){
   const delta=(d.firstSeenScore!=null)?d.rawScore-d.firstSeenScore:0;
   const minSeen=((now-d.firstSeen)/6e4).toFixed(1);
   const cls=d._class;
-  const rowCls=cls==='bull'?'row-bull':cls==='bear'?'row-bear':cls==='warmup'?'row-fade':'';
+  let rowCls=cls==='bull'?'row-bull':cls==='bear'?'row-bear':cls==='warmup'?'row-fade':'';
+  if(d._accel)rowCls='row-accel';
   const pctCls=(d.pctChg??0)>0?'c-up':(d.pctChg??0)<0?'c-down':'c-dim';
   const deltaCls=delta>.5?'c-up':delta<-.5?'c-down':'c-faint';
-  // action dot
+  // action dot - if accel, use accent color
   let dotCls=cls==='bull'?'act act-bull':cls==='bear'?'act act-bear':cls==='warmup'?'act act-dashed':'act act-outline';
+  if(d._accel)dotCls='act';
+  const dotStyle=d._accel?`style="background:var(--accent);box-shadow:0 0 6px var(--accent)"`:'';
   // spread pill
   let spreadHTML='<span class="c-faint">—</span>';
   if(d.optSpreadPct!=null){const sp=d.optSpreadPct;const c=sp<=5?'sp-g':sp<=15?'sp-w':'sp-b';spreadHTML=`<span class="spill ${c}" title="ATM ${d.optDTE}DTE · ${d.optBid?.toFixed(2)}/${d.optAsk?.toFixed(2)}">${sp.toFixed(1)}%</span>`}
   // rel vol
   const rvolHTML=d.relVol!=null?`${fmtN(d.relVol,1)}x`:'—';
   const rvolCls=d.relVol!=null?(d.relVol>=2?'':'c-dim'):'c-faint';
-  // STREAK (v4): time in the current qualifying direction
+  // STREAK
   let streakHTML='<span class="c-faint">—</span>';
   if(d.streakStart&&d.streakState){
     const secs=Math.floor((now-d.streakStart)/1000);
@@ -682,11 +1212,53 @@ function renderRow(d){
     const scol=d.streakState==='bull'?'c-up':'c-down';
     streakHTML=`<span class="${scol}" title="Qualifying direction: ${d.streakState}">${streakStr}</span>`;
   }
-  // FLIPS (v4)
-  const stab=getStability();
+  // v5: Momentum Type badge
+  let typeHTML='<span class="c-faint">—</span>';
+  if(d.momentumType){
+    typeHTML=`<span class="mtype mtype-${d.momentumType}" title="Velocity: ${d.scoreVelocity.toFixed(1)} pts/min">${d.momentumType.slice(0,4)}</span>`;
+  }
+  // v5: Breakout indicator
+  let brkHTML='<span class="brk brk-off">—</span>';
+  if(d.breakoutActive){
+    brkHTML=`<span class="brk brk-on" title="Consolidation breakout ${d.breakoutDir||''} · score ${d.breakoutScore}">BRK</span>`;
+  } else if(d.breakoutScore>=30){
+    brkHTML=`<span class="brk" style="color:var(--accent);opacity:0.6" title="Building breakout · ${d.breakoutScore}/100">${d.breakoutScore}</span>`;
+  }
+  // FLIPS + choppy warning
+  const stab=getEffectiveStability();
   const flipCls=d.flipCount>=stab.flipWarn?'c-down':d.flipCount>=Math.floor(stab.flipWarn/2)?'c-accent':'c-faint';
-  const flipHTML=`<span class="${flipCls}" title="State transitions today (high = choppy ticker)">${d.flipCount}</span>`;
-  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}"></span></div><div class="tkr">${d.ticker}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div><div class="r"><div class="score-bar"><div class="score-fill" style="width:${score}%;background:${scoreColor(score)}"></div><div class="score-txt">${scoreInt}</div></div></div><div class="c">${renderSparkline(d.ticker,d.arrow)}</div><div class="c"><span class="arr ${d.arrow==='up'?'arr-up':d.arrow==='down'?'arr-down':'arr-flat'}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></div><div class="r ${deltaCls}">${delta>=0?'+':''}${delta.toFixed(1)}</div><div class="r">${streakHTML}</div><div class="r">${flipHTML}</div><div class="r c-faint">${minSeen}</div></div>`
+  const flipHTML=`<span class="${flipCls}" title="State transitions today">${d.flipCount}</span>`;
+  const chopWarn=d.flipCount>=stab.flipWarn?`<span class="warn-chop" title="High flip count — indecisive ticker, trade with caution">!</span>`:'';
+  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}" ${dotStyle}></span></div><div class="tkr">${d.ticker}${chopWarn}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div><div class="r"><div class="score-bar"><div class="score-fill" style="width:${score}%;background:${scoreColor(score)}"></div><div class="score-txt">${scoreInt}</div></div></div><div class="c">${renderSparkline(d.ticker,d.arrow)}</div><div class="c"><span class="arr ${d.arrow==='up'?'arr-up':d.arrow==='down'?'arr-down':'arr-flat'}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></div><div class="r ${deltaCls}">${delta>=0?'+':''}${delta.toFixed(1)}</div><div class="r">${streakHTML}</div><div class="c">${typeHTML}</div><div class="r">${brkHTML}</div><div class="r">${flipHTML}</div><div class="r c-faint">${minSeen}</div></div>`
+}
+
+// v5: Regime banner updater
+function updateRegimeBanner(){
+  const banner=qs('regimeBanner');
+  const regime=state.regime||'unknown';
+  const cls={'trending-bull':'regime-bull','trending-bear':'regime-bear','choppy':'regime-choppy','low-vol':'regime-lowvol','mixed':'regime-mixed','unknown':'regime-unknown'}[regime]||'regime-unknown';
+  banner.className='regime-banner '+cls;
+  const labels={'trending-bull':'Trending Bullish','trending-bear':'Trending Bearish','choppy':'Choppy','low-vol':'Low Volatility Drift','mixed':'Mixed','unknown':'Unknown'};
+  qs('regimeText').textContent=`Regime: ${labels[regime]||regime}`;
+  // detail text
+  let detail='Waiting for SPY data in the active scan...';
+  const hasSpy=state.active.has('SPY');
+  if(!hasSpy){
+    detail='Tip: Add SPY to the scan for market regime detection';
+  } else if(regime==='choppy'){
+    detail='Stability filter auto-tightened (1.5x streak duration). Trade only high-conviction setups.';
+  } else if(regime==='trending-bull'||regime==='trending-bear'){
+    detail='Stability filter auto-loosened (0.75x streak). Candidates may appear faster.';
+  } else if(regime==='low-vol'){
+    detail='Thin range. Momentum trades may be scarce today.';
+  } else if(regime!=='unknown'){
+    detail=`Confidence ${(state.regimeConfidence*100).toFixed(0)}% · ${state.spyHistory.length} samples`;
+  }
+  qs('regimeDetail').textContent=detail;
+  // time-of-day badge
+  const todRegime=getTimeOfDayRegime();
+  const todLabels={'open':'Open','midday-early':'Midday','midday-late':'Midday','close-window':'Close Window','closed':'Closed'};
+  qs('todRegimeText').textContent=todLabels[todRegime]||todRegime;
 }
 
 function renderHistory(){const entries=Object.values(state.history),tbody=qs('histBody'),stats=qs('histStats');const total=entries.length,obs=entries.reduce((a,h)=>a+h.obsCount,0),peak=entries.reduce((a,h)=>Math.max(a,h.peak||0),0),hi=entries.filter(h=>(h.peak||0)>=75).length;stats.innerHTML=`<div class="stat-tile"><div class="slbl">Tickers</div><div class="sval accent">${total}</div></div><div class="stat-tile"><div class="slbl">Observations</div><div class="sval">${obs.toLocaleString()}</div></div><div class="stat-tile"><div class="slbl">Peak Score</div><div class="sval">${peak.toFixed(1)}</div></div><div class="stat-tile"><div class="slbl">Hit ≥ 75</div><div class="sval accent">${hi}</div></div>`;if(!entries.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="big">Empty</div></div></td></tr>';return}entries.sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));tbody.innerHTML=entries.slice(0,500).map(h=>`<tr><td style="text-align:left"><span class="tkr">${h.ticker}</span></td><td class="c-faint">${fmtDT(h.firstSeen)}</td><td class="c-faint">${fmtDT(h.lastSeen)}</td><td>${h.obsCount}</td><td class="c-up">${h.peak?.toFixed(1)??'—'}</td><td class="c-down">${h.low?.toFixed(1)??'—'}</td><td>${h.last?.toFixed(1)??'—'}</td><td>${fmtN(h.priceLast)}</td></tr>`).join('')}
@@ -739,14 +1311,21 @@ let lastPollAt=0,lastOptSweepAt=0;
 function tickClock(){const now=Date.now();state.refreshIntervalSec=computeRefreshInterval();qs('refreshLabel').textContent=state.refreshIntervalSec;const elapsed=Math.floor((now-lastPollAt)/1000),remaining=Math.max(0,state.refreshIntervalSec-elapsed);qs('countdownLabel').textContent=remaining;if(state.active.size>0)renderActive();if(!state.paused&&elapsed>=state.refreshIntervalSec&&state.active.size>0){lastPollAt=now;pollOnce()}if(!state.paused&&(now-lastOptSweepAt)>=3000&&state.active.size>0){const f=qs('feedSelect').value;if(f==='tradier'){lastOptSweepAt=now;optionsSweep()}}}
 
 // ---- INIT ----
-function init(){loadKeys();loadSettings();loadOptionsFilter();loadStability();state.history=lsGet(LS_KEYS.history,{})||{};state.transitions=lsGet(LS_KEYS.transitions,[])||[];restoreActiveTickers();
+function init(){loadKeys();loadSettings();loadOptionsFilter();loadStability();loadTodSettings();state.history=lsGet(LS_KEYS.history,{})||{};state.transitions=lsGet(LS_KEYS.transitions,[])||[];restoreActiveTickers();
 ['VP','RV','PE','VE','OA'].forEach(k=>qs('w'+k).addEventListener('input',refreshWeightLabels));
 ['smoothLag','highThresh','lowThresh','minRefresh'].forEach(id=>qs(id).addEventListener('input',refreshBehaviorLabels));
 ['maxSpreadPct','minOptOI','maxDTE','optInterval'].forEach(id=>qs(id).addEventListener('input',refreshOptionsFilterLabels));
 ['stabWindow','stabMinQual','stabMinStreak','stabFlipWarn'].forEach(id=>qs(id).addEventListener('input',refreshStabilityLabels));
 qs('feedSelect').addEventListener('change',()=>{lsSet(LS_KEYS.feed,qs('feedSelect').value);updateFeedPill()});
 if(location.search.includes('code='))handleSchwabCallback();
-updateFeedPill();render();renderTransitionLog();setInterval(tickClock,1000);lastPollAt=Date.now()-3000}
+updateFeedPill();render();renderTransitionLog();updateRegimeBanner();
+setInterval(tickClock,1000);
+// v5: heartbeat every 15s
+setInterval(heartbeat,15000);
+heartbeat();
+// v5: also save full state every 30s even when not polling (idle protection)
+setInterval(()=>{if(state.active.size>0)saveFullState()},30000);
+lastPollAt=Date.now()-3000}
 document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
