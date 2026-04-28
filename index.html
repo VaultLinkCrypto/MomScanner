@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MomScanner v5</title>
+<title>MomScanner v6</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -87,6 +87,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .brk{display:inline-block;font-size:10px;font-weight:700;padding:1px 4px;border-radius:2px}
 .brk-on{background:var(--accent);color:#000}
 .brk-off{color:var(--text-faint)}
+
+/* v6: Don't-trade warning banner */
+.dt-warn{display:flex;align-items:center;gap:12px;padding:10px 14px;margin-bottom:8px;background:linear-gradient(90deg,rgba(255,77,94,0.18),rgba(255,77,94,0.06));border:1px solid var(--down);border-radius:4px;animation:dtPulse 2.5s infinite}
+@keyframes dtPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,94,0.4)}50%{box-shadow:0 0 12px 1px rgba(255,77,94,0.3)}}
+.dt-icon{font-size:20px;color:var(--down);flex-shrink:0}
+.dt-body{flex:1}
+.dt-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--down);letter-spacing:.5px}
+.dt-sub{font-size:11px;color:var(--text-dim);margin-top:2px}
 
 /* v5: Regime banner */
 .regime-banner{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;font-size:11.5px}
@@ -226,7 +234,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="hdr-left">
     <div class="hdr-mark"></div>
     <span class="hdr-name">MomScanner</span>
-    <span class="hdr-sub">MOMENTUM TERMINAL v5</span>
+    <span class="hdr-sub">MOMENTUM TERMINAL v6</span>
   </div>
   <div class="hdr-right">
     <div class="pill"><span id="feedDot" class="dot-warn"></span> <strong id="feedLabel">—</strong></div>
@@ -252,7 +260,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="info-box" id="infoBox">
   <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Score formula &middot; Trading signals</div>
   <div class="info-body">
-    <p><strong>v5 Time-of-Day Tuning:</strong> Thresholds auto-adapt based on market time. Strictest at the 9:30 open (lots of noise), default midday, loosest in the 3:00-4:00 close window (catches late-day moves). Disable in Settings if you prefer manual control.</p>
+    <p><strong>v6 Score Rebalancing (L1-aware):</strong> Score weights re-tuned for L1 data feeds. Volume Pressure dropped to 10% (was 30%) because the bid/ask position proxy was unreliable on L1 due to potentially-stale snapshots. Relative Volume and Price vs EMA boosted to 26% each (the most reliable L1-derived signals). Volatility Expansion and Options Activity now 19% each.</p>
+    <p style="margin-top:6px"><strong>v6 Volume Pressure Rewrite:</strong> The VP component no longer uses the bid/ask position proxy. Instead it tracks tick-direction (last price up/down vs previous poll) volume-weighted over a 30-second sliding window. Cleaner signal on L1 because it relies only on the <code>last</code> field, which is the most reliable L1-tier data point.</p>
+    <p style="margin-top:6px"><strong>v6 Don't-Trade Warning:</strong> Prominent red banner appears when regime is low-vol or choppy AND no candidate has lasted &gt;30 seconds in the last hour. Helps you recognize untradable days early instead of refreshing through dead market hours.</p>
+    <p style="margin-top:6px"><strong>v6 Low-Vol Override:</strong> On low-vol days, the close-window thresholds no longer loosen. Instead, midday-strict thresholds apply throughout the close window because late-day flickers in low-vol environments are even less reliable than usual.</p>
+    <p style="margin-top:6px"><strong>v6 Bug Fixes:</strong> Momentum Type now tags candidates at promotion time (was tagging only after demotion in v5). Breakout detector memory bloat fix for long sessions.</p>
+    <p style="margin-top:10px"><strong>v5 Time-of-Day Tuning:</strong> Thresholds auto-adapt based on market time. Strictest at the 9:30 open (lots of noise), default midday, loosest in the 3:00-4:00 close window (catches late-day moves). Disable in Settings if you prefer manual control.</p>
     <p style="margin-top:6px"><strong>v5 Acceleration Section:</strong> A new third tier appears above Candidates during the 3:00-4:00 PM close window. Shows tickers with active <em>consolidation breakout</em> patterns (last 5 min range &gt; 1.5x the previous 25 min, with price breaking out). These are late-day moves that wouldn't qualify under standard criteria but are tradable with tight exits.</p>
     <p style="margin-top:6px"><strong>v5 Regime Indicator:</strong> Banner at the top labels today's market (trending/choppy/low-vol) based on SPY behavior over the last 30 min. Add SPY to your scan for this to activate. On choppy days, stability requirements auto-tighten.</p>
     <p style="margin-top:6px"><strong>v5 Momentum Type (Type column):</strong> <span class="mtype mtype-drift">DRIFT</span> steady climb, ideal for OTM options · <span class="mtype mtype-thrust">THRUST</span> sharp short move, risky entry · <span class="mtype mtype-reversal">REVR</span> direction flip, high risk/reward.</p>
@@ -260,7 +273,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <p style="margin-top:6px"><strong>v5 Bulletproof Persistence:</strong> Every transition and poll is saved to localStorage immediately. A mid-session refresh or accidental tab close will resume exactly where you left off. A heartbeat warns if a long outage is detected.</p>
     <p style="margin-top:6px"><strong>v5 Session Summary:</strong> Click "Session Summary" in the footer (or at end of session) to generate a one-page HTML report with top candidates, flip stats, momentum-type breakdown, and regime analysis. Printable / save as PDF.</p>
     <p style="margin-top:6px"><strong>v4 Stability &middot; Streak &middot; Flips:</strong> Tickers must qualify in 8/10 cycles AND hold direction for 60s before promoting. Streak column = current qualifying duration. Flips column = transitions today (high = choppy, avoid). Warning icon appears next to ticker name if flip count exceeds threshold.</p>
-    <p style="margin-top:6px"><strong>Score components:</strong> Volume Pressure 30% &middot; Relative Volume 20% &middot; Price vs EMA 20% &middot; Volatility Expansion 15% &middot; Options Activity 15%.</p>
+    <p style="margin-top:6px"><strong>v6 Score components (default weights):</strong> Volume Pressure 10% &middot; Relative Volume 26% &middot; Price vs EMA 26% &middot; Volatility Expansion 19% &middot; Options Activity 19%.</p>
   </div>
 </div>
 
@@ -269,6 +282,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="regime-label"><span class="regime-dot"></span><span id="regimeText">Regime: unknown</span></div>
   <span class="regime-detail" id="regimeDetail">Waiting for SPY data...</span>
   <span class="tod-badge" id="todBadge">ToD: <strong id="todRegimeText">—</strong></span>
+</div>
+
+<!-- v6: Don't-trade warning -->
+<div class="dt-warn" id="dontTradeWarn" style="display:none">
+  <div class="dt-icon">⚠</div>
+  <div class="dt-body">
+    <div class="dt-title">Today may not be tradable</div>
+    <div class="dt-sub">No sustained candidacies in the last hour. Sitting out is a valid choice.</div>
+  </div>
+  <button class="btn" onclick="qs('dontTradeWarn').style.display='none'" style="font-size:9.5px;padding:3px 8px">Dismiss</button>
 </div>
 
 <!-- MAIN TABLE -->
@@ -407,11 +430,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   <div class="sg">
     <h4>Score Weights (sum=100)</h4>
-    <div class="w-row"><label>Volume Pressure</label><input type="range" min="0" max="60" id="wVP" value="30"/><span class="rng-val" id="wVPval">30</span></div>
-    <div class="w-row"><label>Relative Volume</label><input type="range" min="0" max="60" id="wRV" value="20"/><span class="rng-val" id="wRVval">20</span></div>
-    <div class="w-row"><label>Price vs EMA</label><input type="range" min="0" max="60" id="wPE" value="20"/><span class="rng-val" id="wPEval">20</span></div>
-    <div class="w-row"><label>Volatility Exp.</label><input type="range" min="0" max="60" id="wVE" value="15"/><span class="rng-val" id="wVEval">15</span></div>
-    <div class="w-row"><label>Options Activity</label><input type="range" min="0" max="60" id="wOA" value="15"/><span class="rng-val" id="wOAval">15</span></div>
+    <div class="w-row"><label>Volume Pressure</label><input type="range" min="0" max="60" id="wVP" value="10"/><span class="rng-val" id="wVPval">10</span></div>
+    <div class="w-row"><label>Relative Volume</label><input type="range" min="0" max="60" id="wRV" value="26"/><span class="rng-val" id="wRVval">26</span></div>
+    <div class="w-row"><label>Price vs EMA</label><input type="range" min="0" max="60" id="wPE" value="26"/><span class="rng-val" id="wPEval">26</span></div>
+    <div class="w-row"><label>Volatility Exp.</label><input type="range" min="0" max="60" id="wVE" value="19"/><span class="rng-val" id="wVEval">19</span></div>
+    <div class="w-row"><label>Options Activity</label><input type="range" min="0" max="60" id="wOA" value="19"/><span class="rng-val" id="wOAval">19</span></div>
     <div class="w-sum" id="weightSum">Total: 100</div>
   </div>
 
@@ -477,11 +500,11 @@ function saveKeys(){lsSet(LS_KEYS.tradier,qs('tradierKey').value.trim());lsSet(L
 function loadKeys(){qs('tradierKey').value=lsGet(LS_KEYS.tradier,'')||'';qs('tradierEnv').value=lsGet(LS_KEYS.tradierEnv,'https://api.tradier.com/v1')||'https://api.tradier.com/v1';qs('schwabKey').value=lsGet(LS_KEYS.schwabKey,'')||'';qs('schwabSecret').value=lsGet(LS_KEYS.schwabSecret,'')||'';qs('schwabCallback').value=lsGet(LS_KEYS.schwabCallback,'')||(location.origin+location.pathname);qs('feedSelect').value=lsGet(LS_KEYS.feed,'tradier')||'tradier';const t=lsGet(LS_KEYS.schwabToken,null);if(t&&t.access_token)state.schwabAccessToken=t.access_token}
 
 function saveSettings(){lsSet(LS_KEYS.weights,{VP:+qs('wVP').value,RV:+qs('wRV').value,PE:+qs('wPE').value,VE:+qs('wVE').value,OA:+qs('wOA').value});lsSet(LS_KEYS.behavior,{smoothLag:+qs('smoothLag').value,highThresh:+qs('highThresh').value,lowThresh:+qs('lowThresh').value,minRefresh:+qs('minRefresh').value});toast('Settings saved','ok')}
-function loadSettings(){const w=lsGet(LS_KEYS.weights,{VP:30,RV:20,PE:20,VE:15,OA:15}),b=lsGet(LS_KEYS.behavior,{smoothLag:60,highThresh:75,lowThresh:25,minRefresh:5});qs('wVP').value=w.VP;qs('wRV').value=w.RV;qs('wPE').value=w.PE;qs('wVE').value=w.VE;qs('wOA').value=w.OA;qs('smoothLag').value=b.smoothLag;qs('highThresh').value=b.highThresh;qs('lowThresh').value=b.lowThresh;qs('minRefresh').value=b.minRefresh;refreshWeightLabels();refreshBehaviorLabels()}
-function resetSettings(){qs('wVP').value=30;qs('wRV').value=20;qs('wPE').value=20;qs('wVE').value=15;qs('wOA').value=15;qs('smoothLag').value=60;qs('highThresh').value=75;qs('lowThresh').value=25;qs('minRefresh').value=5;refreshWeightLabels();refreshBehaviorLabels();saveSettings()}
+function loadSettings(){const w=lsGet(LS_KEYS.weights,{VP:10,RV:26,PE:26,VE:19,OA:19}),b=lsGet(LS_KEYS.behavior,{smoothLag:60,highThresh:75,lowThresh:25,minRefresh:5});qs('wVP').value=w.VP;qs('wRV').value=w.RV;qs('wPE').value=w.PE;qs('wVE').value=w.VE;qs('wOA').value=w.OA;qs('smoothLag').value=b.smoothLag;qs('highThresh').value=b.highThresh;qs('lowThresh').value=b.lowThresh;qs('minRefresh').value=b.minRefresh;refreshWeightLabels();refreshBehaviorLabels()}
+function resetSettings(){qs('wVP').value=10;qs('wRV').value=26;qs('wPE').value=26;qs('wVE').value=19;qs('wOA').value=19;qs('smoothLag').value=60;qs('highThresh').value=75;qs('lowThresh').value=25;qs('minRefresh').value=5;refreshWeightLabels();refreshBehaviorLabels();saveSettings()}
 function refreshWeightLabels(){['VP','RV','PE','VE','OA'].forEach(k=>qs('w'+k+'val').textContent=qs('w'+k).value);const s=['VP','RV','PE','VE','OA'].reduce((a,k)=>a+ +qs('w'+k).value,0);const el=qs('weightSum');el.textContent='Total: '+s+(s===100?' ✓':' (normalized)');el.classList.toggle('bad',s===0)}
 function refreshBehaviorLabels(){qs('smoothLagVal').textContent=qs('smoothLag').value+'s';qs('highThreshVal').textContent=qs('highThresh').value;qs('lowThreshVal').textContent=qs('lowThresh').value;qs('minRefreshVal').textContent=qs('minRefresh').value+'s'}
-function getWeights(){const w=lsGet(LS_KEYS.weights,{VP:30,RV:20,PE:20,VE:15,OA:15}),s=w.VP+w.RV+w.PE+w.VE+w.OA;if(s===0)return{VP:.2,RV:.2,PE:.2,VE:.2,OA:.2};return{VP:w.VP/s,RV:w.RV/s,PE:w.PE/s,VE:w.VE/s,OA:w.OA/s}}
+function getWeights(){const w=lsGet(LS_KEYS.weights,{VP:10,RV:26,PE:26,VE:19,OA:19}),s=w.VP+w.RV+w.PE+w.VE+w.OA;if(s===0)return{VP:.2,RV:.2,PE:.2,VE:.2,OA:.2};return{VP:w.VP/s,RV:w.RV/s,PE:w.PE/s,VE:w.VE/s,OA:w.OA/s}}
 function getBehavior(){return lsGet(LS_KEYS.behavior,{smoothLag:60,highThresh:75,lowThresh:25,minRefresh:5})}
 
 function saveOptionsFilter(){lsSet(LS_KEYS.optionsFilter,{pennyPilotOnly:qs('pennyPilotOnly').checked,maxSpreadPct:+qs('maxSpreadPct').value,minOptOI:+qs('minOptOI').value,maxDTE:+qs('maxDTE').value,optInterval:+qs('optInterval').value});toast('Options filter saved','ok');render()}
@@ -534,7 +557,12 @@ function getEffectiveBehavior(){
   const tod=getTodSettings();
   if(!tod.enabled)return base;
   const regime=getTimeOfDayRegime();
-  const overlay=tod[regime]||{};
+  let overlay=tod[regime]||{};
+  // V6: on low-vol days, the close-window loose thresholds attract noise.
+  // Override the close-window overlay to use midday-like thresholds instead.
+  if(regime==='close-window'&&state.regime==='low-vol'){
+    overlay=tod['midday-late']||{};
+  }
   return{
     smoothLag:overlay.smoothLag??base.smoothLag,
     highThresh:overlay.highThresh??base.highThresh,
@@ -548,7 +576,11 @@ function getEffectiveStability(){
   let eff={...base};
   if(tod.enabled){
     const regime=getTimeOfDayRegime();
-    const overlay=tod[regime]||{};
+    let overlay=tod[regime]||{};
+    // V6: same low-vol override
+    if(regime==='close-window'&&state.regime==='low-vol'){
+      overlay=tod['midday-late']||{};
+    }
     if(overlay.minStreak!=null)eff.minStreak=overlay.minStreak;
     if(overlay.minQual!=null)eff.minQual=overlay.minQual;
   }
@@ -558,10 +590,10 @@ function getEffectiveStability(){
   return eff;
 }
 
-function updateFeedPill(){const f=qs('feedSelect').value,dot=qs('feedDot'),lbl=qs('feedLabel');dot.className=state.lastFeedStatus==='ok'?'dot-live':state.lastFeedStatus==='err'?'dot-err':'dot-warn';lbl.textContent=f==='tradier'?'Tradier L2':(state.schwabAccessToken?'Schwab':'Schwab (no token)')}
+function updateFeedPill(){const f=qs('feedSelect').value,dot=qs('feedDot'),lbl=qs('feedLabel');dot.className=state.lastFeedStatus==='ok'?'dot-live':state.lastFeedStatus==='err'?'dot-err':'dot-warn';lbl.textContent=f==='tradier'?'Tradier L1':(state.schwabAccessToken?'Schwab':'Schwab (no token)')}
 
 // ---- TICKER MGMT ----
-function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null,priceRangeShort:[],priceRangeLong:[],breakoutScore:0,breakoutActive:false,scoreVelocity:0,momentumType:null,peakScore:50,peakScoreAt:null,accelCandidate:false}}
+function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null,priceRangeShort:[],priceRangeLong:[],breakoutScore:0,breakoutActive:false,scoreVelocity:0,momentumType:null,peakScore:50,peakScoreAt:null,accelCandidate:false,tickBuffer:[],_lastTickPrice:null,_lastTickVolume:null}}
 
 function addTickers(){const raw=qs('tickerInput').value,parts=raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));if(!parts.length){toast('No valid tickers','err');return}const of=getOptionsFilter();let added=0,rejected=0;const now=Date.now(),rejList=[];parts.forEach(t=>{if(of.pennyPilotOnly&&!PENNY_PILOT.has(t)){rejected++;rejList.push(t);return}if(!state.active.has(t)){state.active.set(t,makeTicker(t,now));state.priceHistory.set(t,[]);state.scoreHistory.set(t,[]);added++}});qs('tickerInput').value='';saveActiveTickers();render();let msg=`Added ${added} ticker${added!==1?'s':''}`;if(rejected)msg+=` · ${rejected} rejected (non-Penny-Pilot: ${rejList.slice(0,4).join(', ')}${rejList.length>4?'…':''})`;toast(msg,rejected>added?'err':'ok',4500)}
 
@@ -662,12 +694,51 @@ function restoreActiveTickers(){
 
 // ---- SCORING ----
 function computeRawScore(d){
-  let vp=50;if(d.bid&&d.ask&&d.last){const mid=(d.bid+d.ask)/2,sp=d.ask-d.bid;if(sp>0){const pos=(d.last-d.bid)/sp;vp=50+(pos-.5)*100}vp=.6*vp+.4*(50+d.direction30s*5);vp=clamp(vp)}
+  // V6: Volume Pressure rewrite — tick-direction over 30s sliding window, volume-weighted.
+  // No longer relies on bid/ask position proxy (which was unreliable on L1 due to
+  // potentially-stale bid/ask snapshots). Uses last-price tick direction + volume delta.
+  let vp=50;
+  if(d.tickBuffer&&d.tickBuffer.length>=2){
+    // each tick has {t, sign, volDelta} where sign is +1 (up tick), -1 (down tick), 0 (flat)
+    // compute net signed volume vs total volume in the window
+    let netSigned=0,totalVol=0;
+    d.tickBuffer.forEach(tk=>{
+      netSigned+=tk.sign*tk.volDelta;
+      totalVol+=Math.abs(tk.volDelta);
+    });
+    if(totalVol>0){
+      const ratio=netSigned/totalVol; // -1 to +1
+      vp=clamp(50+ratio*40); // ±40 swing from neutral
+    }
+  }
+  // small smoothing toward direction30s for continuity
+  if(d.direction30s!=null)vp=.7*vp+.3*(50+d.direction30s*30);
+  vp=clamp(vp);
   let rv=50;if(d.relVol!=null&&d.relVol>0)rv=clamp(50+25*Math.log2(d.relVol));
   let pe=50;if(d.last&&d.ema9&&d.atr&&d.atr>0){pe=clamp(50+((d.last-d.ema9)/d.atr)*20)}else if(d.pctChg!=null)pe=clamp(50+d.pctChg*5);
   let ve=50;if(d.atr&&d.atr>0&&d.last&&d.pctChg!=null){const tr=Math.abs(d.pctChg/100)*d.last;ve=clamp(50+(tr/d.atr-.5)*60)}
   let oa=50;if(d.optOI&&d.optOI>0&&d.optSpreadPct!=null){const ss=100-Math.min(100,d.optSpreadPct*4),os=clamp(50+15*Math.log2(Math.max(.1,d.optOI/500)));oa=clamp(.6*ss+.4*os)}
   d.components={VP:vp,RV:rv,PE:pe,VE:ve,OA:oa};const w=getWeights();return clamp(vp*w.VP+rv*w.RV+pe*w.PE+ve*w.VE+oa*w.OA)
+}
+
+// V6: per-poll tick buffer maintenance.
+// Called from pollOnce BEFORE computeRawScore. Tracks last-price ticks with volume deltas
+// over a 30-second sliding window. This replaces the L2-required bid/ask-position proxy.
+function updateTickBuffer(d){
+  if(!d.tickBuffer)d.tickBuffer=[];
+  const now=Date.now();
+  if(d.last!=null&&d._lastTickPrice!=null&&d._lastTickVolume!=null){
+    const sign=Math.sign(d.last-d._lastTickPrice);
+    const volDelta=Math.max(0,(d.volume||0)-d._lastTickVolume);
+    if(volDelta>0){ // only record ticks where volume actually moved
+      d.tickBuffer.push({t:now,sign,volDelta});
+    }
+  }
+  d._lastTickPrice=d.last;
+  d._lastTickVolume=d.volume;
+  // trim to last 30s
+  const cut=now-30000;
+  while(d.tickBuffer.length&&d.tickBuffer[0].t<cut)d.tickBuffer.shift();
 }
 function applySmoothing(d,raw){const b=getEffectiveBehavior(),tau=Math.max(5,b.smoothLag),dt=state.refreshIntervalSec,alpha=1-Math.exp(-dt/tau);d.smoothScore+=alpha*(raw-d.smoothScore);d.rawScore=raw;if(d.firstSeenScore===null&&d.lastSeen!==null)d.firstSeenScore=d.smoothScore}
 function updateDirection(d,ticker){const hist=state.priceHistory.get(ticker)||[],now=Date.now();if(d.last!=null)hist.push({t:now,price:d.last});const cut=now-30000;while(hist.length&&hist[0].t<cut)hist.shift();state.priceHistory.set(ticker,hist);if(hist.length<2){d.direction30s=0;d.arrow='flat';return}let sum=0,cnt=0;for(let i=1;i<hist.length;i++){sum+=Math.sign(hist[i].price-hist[i-1].price);cnt++}const avg=cnt?sum/cnt:0;d.direction30s=avg;d.arrow=avg>.15?'up':avg<-.15?'down':'flat'}
@@ -690,6 +761,10 @@ function updateBreakoutDetection(d){
   const shortCut=now-5*60000,longCut=now-30*60000;
   while(d.priceRangeShort.length&&d.priceRangeShort[0].t<shortCut)d.priceRangeShort.shift();
   while(d.priceRangeLong.length&&d.priceRangeLong[0].t<longCut)d.priceRangeLong.shift();
+  // V6: hard caps to prevent memory bloat over long sessions (was unbounded)
+  // 30 min at 5s polling = 360 entries max in long; 5 min = 60 in short. Add headroom.
+  if(d.priceRangeShort.length>120)d.priceRangeShort=d.priceRangeShort.slice(-120);
+  if(d.priceRangeLong.length>500)d.priceRangeLong=d.priceRangeLong.slice(-500);
   // need at least 25 min of data to assess
   if(d.priceRangeLong.length<10||d.priceRangeShort.length<3){d.breakoutScore=0;d.breakoutActive=false;return}
   // compute long-window "consolidation" range (excluding the short window, so baseline is the "quiet" period)
@@ -829,7 +904,7 @@ function connectSchwab(){const k=qs('schwabKey').value.trim(),cb=qs('schwabCallb
 async function handleSchwabCallback(){const p=new URLSearchParams(location.search),code=p.get('code');if(!code)return;const k=lsGet(LS_KEYS.schwabKey,''),s=lsGet(LS_KEYS.schwabSecret,''),cb=lsGet(LS_KEYS.schwabCallback,'');if(!k||!s){toast('Missing Schwab creds','err');return}try{const r=await fetch('https://api.schwabapi.com/v1/oauth/token',{method:'POST',headers:{'Authorization':'Basic '+btoa(k+':'+s),'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`});if(!r.ok)throw new Error('Token HTTP '+r.status);const t=await r.json();lsSet(LS_KEYS.schwabToken,t);state.schwabAccessToken=t.access_token;history.replaceState({},document.title,cb);toast('Schwab connected','ok');updateFeedPill()}catch(e){toast('Schwab OAuth failed: '+e.message,'err')}}
 
 // ---- POLL LOOP ----
-async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateDirection(d,t);updateBreakoutDetection(d);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d);updateStability(d);updateMomentumType(d,t)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
+async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateTickBuffer(d);updateDirection(d,t);updateBreakoutDetection(d);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d);updateMomentumType(d,t);updateStability(d)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
 
 // ---- HISTORY ----
 function recordHistory(d){const h=state.history[d.ticker]||{ticker:d.ticker,firstSeen:d.firstSeen,lastSeen:d.lastSeen,obsCount:0,peak:d.smoothScore,low:d.smoothScore,last:d.smoothScore,priceLast:d.last};h.lastSeen=d.lastSeen;h.obsCount++;h.peak=Math.max(h.peak,d.smoothScore);h.low=Math.min(h.low,d.smoothScore);h.last=d.smoothScore;h.priceLast=d.last;state.history[d.ticker]=h;if(h.obsCount%5===0)lsSet(LS_KEYS.history,state.history)}
@@ -1259,6 +1334,56 @@ function updateRegimeBanner(){
   const todRegime=getTimeOfDayRegime();
   const todLabels={'open':'Open','midday-early':'Midday','midday-late':'Midday','close-window':'Close Window','closed':'Closed'};
   qs('todRegimeText').textContent=todLabels[todRegime]||todRegime;
+  // V6: Don't-trade warning banner
+  updateDontTradeWarning();
+}
+
+// V6: Detect untradable conditions and show a prominent warning
+// Triggers when: (1) regime is low-vol AND (2) no candidate lasted >30s in the last 60 min
+// AND (3) we've been running long enough for that to be meaningful
+function updateDontTradeWarning(){
+  const warnEl=qs('dontTradeWarn');
+  if(!warnEl)return;
+  const regime=state.regime;
+  const sessionAgeMin=state.sessionStart?(Date.now()-state.sessionStart)/60000:0;
+  // need at least 60 min of session to evaluate
+  if(sessionAgeMin<60){warnEl.style.display='none';return}
+  // only fire on low-vol or choppy regimes
+  if(regime!=='low-vol'&&regime!=='choppy'){warnEl.style.display='none';return}
+  // examine last 60 min of transitions for any candidacy lasting >30s
+  const cut=Date.now()-60*60000;
+  const recent=state.transitions.filter(e=>e.t>=cut);
+  // pair promotions with demotions in this window
+  const opens={};
+  let maxDur=0,sustainedCount=0;
+  recent.forEach(e=>{
+    if((e.to==='bull'||e.to==='bear')&&e.from!=='bull'&&e.from!=='bear'){
+      opens[e.ticker]=e.t;
+    } else if((e.from==='bull'||e.from==='bear')&&!opens[e.ticker]){
+      // demotion without seen promotion (truncated window) — skip
+    } else if((e.from==='bull'||e.from==='bear')&&opens[e.ticker]){
+      const dur=(e.t-opens[e.ticker])/1000;
+      if(dur>maxDur)maxDur=dur;
+      if(dur>=30)sustainedCount++;
+      delete opens[e.ticker];
+    }
+  });
+  // also check still-open candidacies
+  Object.values(opens).forEach(t=>{
+    const dur=(Date.now()-t)/1000;
+    if(dur>maxDur)maxDur=dur;
+    if(dur>=30)sustainedCount++;
+  });
+  if(sustainedCount===0&&recent.length>0){
+    warnEl.style.display='flex';
+    warnEl.querySelector('.dt-sub').textContent=`${recent.length} transitions in last hour, longest candidacy ${maxDur.toFixed(0)}s. Sitting out is a valid choice.`;
+  } else if(sustainedCount===0&&recent.length===0&&sessionAgeMin>=90){
+    // 90 min with zero transitions at all
+    warnEl.style.display='flex';
+    warnEl.querySelector('.dt-sub').textContent=`No candidate activity in the last hour. Quiet market — consider waiting for direction.`;
+  } else {
+    warnEl.style.display='none';
+  }
 }
 
 function renderHistory(){const entries=Object.values(state.history),tbody=qs('histBody'),stats=qs('histStats');const total=entries.length,obs=entries.reduce((a,h)=>a+h.obsCount,0),peak=entries.reduce((a,h)=>Math.max(a,h.peak||0),0),hi=entries.filter(h=>(h.peak||0)>=75).length;stats.innerHTML=`<div class="stat-tile"><div class="slbl">Tickers</div><div class="sval accent">${total}</div></div><div class="stat-tile"><div class="slbl">Observations</div><div class="sval">${obs.toLocaleString()}</div></div><div class="stat-tile"><div class="slbl">Peak Score</div><div class="sval">${peak.toFixed(1)}</div></div><div class="stat-tile"><div class="slbl">Hit ≥ 75</div><div class="sval accent">${hi}</div></div>`;if(!entries.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="big">Empty</div></div></td></tr>';return}entries.sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));tbody.innerHTML=entries.slice(0,500).map(h=>`<tr><td style="text-align:left"><span class="tkr">${h.ticker}</span></td><td class="c-faint">${fmtDT(h.firstSeen)}</td><td class="c-faint">${fmtDT(h.lastSeen)}</td><td>${h.obsCount}</td><td class="c-up">${h.peak?.toFixed(1)??'—'}</td><td class="c-down">${h.low?.toFixed(1)??'—'}</td><td>${h.last?.toFixed(1)??'—'}</td><td>${fmtN(h.priceLast)}</td></tr>`).join('')}
