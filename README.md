@@ -1,38 +1,129 @@
-# MomScanner v5
+# MomScanner v6
 
-Real-time momentum scoring terminal with bulletproof persistence, time-of-day adaptive thresholds, late-day breakout detection, market regime classification, momentum-type tagging, and end-of-session reporting. Built on top of v4's stability filter and session log foundation.
+Real-time momentum scoring terminal with L1-aware scoring, bulletproof persistence, time-of-day adaptive thresholds, late-day breakout detection, market regime classification, momentum-type tagging, end-of-session reporting, and an explicit "don't trade today" warning system.
 
-## What's new in v5
+## What's new in v6
 
-- **Bulletproof persistence** — every poll cycle and every state transition saves to localStorage immediately. A mid-session GitHub deploy, browser refresh, lock screen, or laptop lid close no longer loses your session. Includes heartbeat detection that warns when an outage occurred.
-- **Time-of-day adaptive tuning** — score thresholds and stability requirements automatically adjust based on the market hour: strict at the 9:30 open (avoid noise), default midday, loose in the 3:00-4:00 PM close window (catch INTC-style late-day moves).
-- **Acceleration section** — a new third tier above Candidates appears only during the close window, populated by tickers showing consolidation-breakout patterns. These are the late-day moves that slip past standard criteria.
-- **Consolidation breakout detector** — continuously compares the last 5 minutes of price action to the prior 25 minutes. When range expands and price breaks out of the consolidation, a "Brk" badge appears.
-- **Market regime indicator** — banner at the top classifies the day from SPY's behavior over a rolling 30 minutes: trending-bullish, trending-bearish, choppy, low-volatility, or mixed. Stability filter auto-tightens on choppy days and loosens on trending days.
-- **Momentum-type classifier** — labels each candidate as DRIFT (steady, ideal for OTM options), THRUST (sharp short move, risky entry), or REVR (direction reversal after prior move).
-- **Flip counter warning icon** — a red `!` badge appears next to the ticker name when flip count exceeds threshold, visible even inside Candidates as a passive caution.
-- **End-of-session summary report** — generates a one-page HTML report (printable to PDF) with all session stats, top candidates, most-flipped tickers, regime breakdown, and contextual takeaways.
-- **Session boundary detection** — recognizes when a saved snapshot is from a previous trading day and starts a fresh session automatically.
+- **Volume Pressure rewrite** — the VP component no longer relies on the bid/ask position proxy (which was unreliable on L1 due to potentially-stale snapshots). Instead it tracks tick-direction (last price up/down vs previous poll) volume-weighted over a 30-second sliding window. Cleaner and more honest signal on L1 data.
+- **Score rebalancing for L1 reality** — default weights re-tuned. Volume Pressure dropped to 10% (was 30%) because L1 makes the proxy noisy. Relative Volume and Price vs EMA boosted to 26% each. Volatility Expansion and Options Activity now 19% each. The 70% of the score that comes from daily-aggregate fields (RV, PE, VE) is the most reliable on L1 and now dominates.
+- **Don't-Trade warning banner** — prominent red banner appears when the regime is low-vol or choppy AND no candidate has lasted >30 seconds in the last hour. Tells you explicitly when the market isn't producing tradable setups, instead of leaving you to figure it out from oscillating candidates.
+- **Low-vol close-window override** — on low-vol days, the close-window thresholds no longer loosen. Midday-strict thresholds apply throughout the close window because late-day flickers in low-vol environments are even less reliable than usual.
+- **Bug fix: momentum type at promotion time** — `updateMomentumType` now runs BEFORE `updateStability` so the type column populates the moment a candidate appears, not after demotion (Monday's session showed types only attached after demotion).
+- **Bug fix: breakout detector memory bound** — added a hard cap on the long-window price array to prevent memory bloat over multi-hour sessions.
+- **Honesty fixes** — feed label corrected from "Tradier L2" to "Tradier L1". All references in the UI and documentation updated to reflect actual data tier.
 
-## What carried over from v4
+## What carried over from v5
 
-- Two-stage candidate classification (raw qualification + stability gate)
-- Streak column and Flips column
-- Session Log with full transition history and CSV export
-- Transition CSV export
-- Stability settings (window, min qual cycles, min streak, flip warn)
+- Bulletproof persistence (every poll and transition saves immediately, heartbeat, session detection)
+- Time-of-day adaptive tuning
+- Acceleration section + consolidation breakout detector
+- Market regime indicator
+- Momentum-type classifier (DRIFT / THRUST / REVR)
+- Flip counter warning icon
+- End-of-session summary report
 
-## What carried over from v3
+## What carried over from v4 / v3
 
-- Two-tier layout, action dots, sparklines, confidence fade, slide-out settings, color discipline
-- Penny Pilot whitelist
-- Live options spread/OI columns with auto-hide
-- Smoothed scoring with 5 weighted components
+- Two-stage candidate classification (raw + stability gate)
+- Streak column, Flips column, Session Log
+- Two-tier layout, action dots, sparklines, confidence fade, slide-out settings
+- Penny Pilot whitelist, live options spread/OI columns with auto-hide
 - Schwab + Tradier dual-feed support
 
 ---
 
-## Part 1 — Set up the GitHub repository
+## Part 1 — The L1 Honesty Layer
+
+### Why this matters
+
+In prior conversations I was operating under the (incorrect) assumption that your Tradier feed included Level 2 data. After review of Tradier's actual documentation, your feed is Level 1 only — meaning:
+
+- **Quote snapshots, not streams.** Each `bid`, `ask`, and `last` field is the most recent value at the moment your poll request was answered. The bid and ask may have refreshed at slightly different timestamps than the last trade.
+- **No tick-by-tick time-and-sales.** L2 would give you every individual print with a flag indicating whether it hit bid or ask. L1 gives you only daily aggregates.
+- **No order book depth.** L2 would include bid/ask sizes at multiple price levels. L1 gives you only top-of-book bid/ask sizes.
+
+### What this changed
+
+The original Volume Pressure component (30% of v5 score) relied on a proxy: "where in the bid-ask spread did the last trade print" — close to ask = buying, close to bid = selling. With L1's potentially-stale bid/ask snapshots, this proxy was producing false direction flips. Monday's session showed the symptom clearly: NVDA at high volume oscillating in/out of candidate status because the VP component was flipping based on quote timing rather than actual market activity.
+
+### What v6 does about it
+
+Two changes implemented as Option A + Option B from our discussion:
+
+**Option A (immediate rebalance):** Default score weights changed.
+- Old (v5): VP 30, RV 20, PE 20, VE 15, OA 15
+- New (v6): VP 10, RV 26, PE 26, VE 19, OA 19
+
+The 20-point reduction in VP gets distributed: +6 to RV, +6 to PE, +4 to VE, +4 to OA. The two daily-aggregate components (RV and PE) get the largest boost because they're the most reliable on L1.
+
+**Option B (proper rewrite):** The VP component itself was rewritten to no longer use the bid/ask proxy. Instead it uses tick-direction volume weighting:
+
+1. Each poll cycle, compare current `last` to the previous poll's `last`. Sign = +1 (up), -1 (down), 0 (flat).
+2. Compute the volume delta since the last poll.
+3. Push `{sign, volDelta}` into a rolling 30-second buffer.
+4. Sum signed volume across the buffer, divide by total volume, clamp to ±1.
+5. Convert to a 0-100 score via `50 + ratio*40`.
+6. Blend in 30% direction-arrow signal for continuity.
+
+This relies only on the `last` field (the most reliable L1 data point) and the daily volume counter. No bid/ask timing dependencies.
+
+### What this means for trading
+
+Your scores will be slightly different on the same data than they were in v5, but more accurate. Specifically:
+- Stocks with genuine sustained momentum will score similarly to before
+- Stocks that were oscillating in v5 due to quote-timing noise will be more stable in v6
+- The candidate flip rate should drop noticeably on choppy days
+
+You may want to lower your score threshold from 75 to 73 or 72 to compensate for the slight average-score reduction caused by the lower VP weight. Test for a few sessions before deciding.
+
+---
+
+## Part 2 — The Don't-Trade Warning
+
+### Why this exists
+
+Monday's session produced 17 candidates, none lasting more than 46 seconds, on a low-vol day. The tool was correctly reporting that the market was untradable, but the only signal communicating this was the small "Regime: Low Volatility Drift" text in the corner. Easy to miss.
+
+v6 makes it impossible to miss.
+
+### When it triggers
+
+The warning banner appears when ALL of these conditions are true:
+1. Session has been running for at least 60 minutes (so we have enough data to evaluate)
+2. Regime is `low-vol` OR `choppy`
+3. In the last 60 minutes, NO candidate (across all tickers) lasted ≥30 seconds
+
+OR alternatively:
+1. Session running 90+ minutes
+2. Regime is `low-vol` or `choppy`
+3. ZERO transitions in the last 60 minutes (truly dead market)
+
+### What it looks like
+
+Bright red banner above the table with a pulsing glow effect: "⚠ Today may not be tradable" with a subtitle telling you the specific stats (e.g., "23 transitions in last hour, longest candidacy 11s. Sitting out is a valid choice.").
+
+### What you should do when you see it
+
+The warning is exactly what it says: an opinion that today is unlikely to produce profitable trades for your strategy. Options to consider:
+- **Sit out.** Close MomScanner and come back tomorrow.
+- **Tighten settings.** If you must trade, raise score threshold to 80, raise min streak to 90s, raise min OI to 2000.
+- **Switch strategy.** If you have a different strategy that works in low-vol markets (covered calls, theta-positive), switch to that.
+- **Dismiss and continue.** Click the Dismiss button to hide the banner. It won't reappear during this session even if conditions persist. The banner does not block any functionality.
+
+### What it explicitly does NOT do
+
+- It doesn't prevent you from trading
+- It doesn't change any scoring or thresholds
+- It doesn't suppress candidates from appearing if they qualify
+- It doesn't reset your transition log
+
+It's a warning, not an enforcement mechanism. Your trading decisions remain entirely your own.
+
+---
+
+## Part 3 — Set up the GitHub repository
+
+(Same as prior versions. If your repo is already set up, skip to step 1.7.)
 
 ### 1.1 — Create your GitHub account (skip if you already have one)
 
@@ -51,7 +142,7 @@ Real-time momentum scoring terminal with bulletproof persistence, time-of-day ad
 
 1. **Add file** → **Create new file**.
 2. Name: `index.html`.
-3. Paste the entire contents of the v5 index.html.
+3. Paste the entire contents of the v6 index.html.
 4. Click **Commit new file**.
 
 ### 1.4 — Replace the README
@@ -65,19 +156,30 @@ Real-time momentum scoring terminal with bulletproof persistence, time-of-day ad
 2. Source: Deploy from a branch. Branch: `main` / `(root)`. Save.
 3. Wait 1-2 minutes. Refresh. Copy the URL shown.
 
-### 1.6 — Updating later
+### 1.6 — First-time launch test
+
+1. Open your MomScanner URL.
+2. Click the **gear icon** (top right).
+3. Set Feed to **Tradier**, paste your API key, set Environment to **Production**.
+4. Click **Save Keys**, then **Test Feed**.
+5. A toast should say `Feed OK`.
+6. Verify the feed pill now reads "Tradier L1" (not "L2" — this is correct).
+
+### 1.7 — Updating from v5 to v6
 
 1. Go to repo → click `index.html` → pencil icon.
-2. Ctrl+A → delete → paste new code → Commit.
+2. Ctrl+A → delete → paste new v6 code → Commit.
 3. Wait 30-60 seconds. **Hard refresh: Ctrl+Shift+R**.
-
-**v5 advantage:** thanks to bulletproof persistence, mid-session deploys no longer lose your session data. After Ctrl+Shift+R, MomScanner restores all active tickers, scores, streaks, flips, and transition history exactly where you left off.
+4. Your active tickers, history, transitions, settings, and API keys all carry over.
+5. **Note:** your saved score weights will retain whatever you had in v5 (default was 30/20/20/15/15). To use the new v6 defaults, click **Reset Defaults** in the Score Weights section of Settings, or manually adjust to 10/26/26/19/19.
 
 ---
 
-## Part 2 — Schwab Developer API
+## Part 4 — Schwab Developer API
 
-### 2.1 — Register at developer.schwab.com using your brokerage credentials
+(Unchanged from prior versions. Schwab is L1+ depending on tier.)
+
+### 2.1 — Register at developer.schwab.com using brokerage credentials.
 
 ### 2.2 — Create app
 
@@ -85,251 +187,93 @@ Real-time momentum scoring terminal with bulletproof persistence, time-of-day ad
 - Callback URL: your GitHub Pages URL (with trailing slash)
 - API Products: Accounts and Trading Production + Market Data Production
 
-### 2.3 — Wait 1-3 business days for approval
+### 2.3 — Wait 1-3 business days for approval.
 
-### 2.4 — When approved
-
-1. Copy App Key + App Secret from developer dashboard.
-2. In MomScanner: gear icon → paste both → set Callback URL → Save Keys.
-3. Change Feed dropdown to Schwab → Connect Schwab → log in → approve.
-4. You'll be redirected back; toast says "Schwab connected."
-
-### 2.5 — Token refresh
-
-Tokens expire after 30 min. Click gear → Connect Schwab again when needed.
+### 2.4 — When approved, paste keys in MomScanner Settings → Schwab fields → Save → Connect Schwab → log in → approve.
 
 ---
 
-## Part 3 — thinkorswim web scan filter
+## Part 5 — thinkorswim web scan filters
 
-### 3.1 — Set up the scan
+(Unchanged from v5.)
 
-1. trade.thinkorswim.com → **Scan** → new or existing scan.
-2. Set **Scan In** to **All Symbols**.
-
-### 3.2 — Recommended filters
+### Recommended filters
 
 | Filter | Setting |
 |---|---|
 | Last | Min: **20** · Max: **500** |
 | Volume | Min: **2,000,000** |
-| Percent Change | Min: **1.00** (leave Max blank) |
-| Market Cap | Min: **5000** (M suffix means millions, so 5000 M = $5 billion) |
+| Percent Change | Min: **1.00** (no max) |
+| Market Cap | Min: **5000** (M = millions, so 5000 M = $5 billion) |
 | Option Volume Index | Min: **1.00** |
 
-**Critical Market Cap note:** the field shows an "M" suffix meaning millions. Enter `5000` for $5B, NOT `5000000000`.
+**Critical:** include **SPY** in your imported list every time, for regime detection.
 
-**v5 recommendation: ALWAYS include SPY in your imported list.** The regime indicator depends on SPY price data flowing through the active scan. Without SPY, the regime banner stays at "unknown" and stability auto-adjustment can't activate.
+### Two scans approach
 
-### 3.3 — Running and importing
-
-1. Click **Scan**. Copy ticker symbols.
-2. Paste into MomScanner → **Add to scan**.
-3. **Add SPY** if not already in your thinkorswim watchlist.
-4. Re-scan thinkorswim every 5-15 minutes during the session.
+- **MomScanner-Main**: above filters. Run from 9:30 AM to ~2:30 PM, refresh every 20 min.
+- **MomScanner-CloseWindow**: same but Volume ≥ 3M, Percent Change between 0.30 and 3.00, OVI ≥ 1.5. Run at 2:55 PM only, to catch consolidation candidates.
 
 ---
 
-## Part 4 — Bulletproof Persistence (v5 core)
+## Part 6 — The v6 scoring formula
 
-### What it solves
+| Component | Weight (default) | What it measures | Reliability on L1 |
+|---|---|---|---|
+| Volume Pressure | 10% | Tick-direction volume-weighted over 30s rolling window | Good (rewritten in v6 to not depend on bid/ask timing) |
+| Relative Volume | 26% | Today's volume vs 20-day average | Excellent (daily aggregate) |
+| Price vs EMA | 26% | Distance from 9-EMA, ATR-normalized | Excellent (uses last + day range) |
+| Volatility Expansion | 19% | Today's range vs ATR(14) | Excellent (daily aggregate) |
+| Options Activity | 19% | ATM spread tightness + OI quality | Excellent (separate options chain endpoint) |
 
-In v4, the transition log saved to localStorage every 20 entries, and the active ticker list was stored as just a list of symbols. This meant:
-- A mid-session page refresh restarted every ticker's 3-minute warmup
-- A browser crash could lose up to 19 transitions
-- A GitHub Pages deploy mid-session wiped working state
-- A laptop lid close or Windows lock had no recovery indicator
+Score 50 = neutral. 75+ = strong signal. ≤25 = strong opposite. EMA smoothing with configurable lag (default 60s, overridden by ToD when enabled). ΔScr = raw - first-seen, zero lag.
 
-### What v5 does
+### How VP works in v6 specifically
 
-**Every poll cycle** writes a complete state snapshot to localStorage including all ticker fields (scores, price history, score history, stability window, streak state, flip count, options data, momentum type, breakout state).
+Each poll cycle, the new `updateTickBuffer` function:
+1. Compares current `last` to the previously-recorded `last`. Computes sign (+1/-1/0).
+2. Computes volume delta since previous poll.
+3. Pushes `{timestamp, sign, volDelta}` into the ticker's tick buffer.
+4. Trims buffer to last 30 seconds.
 
-**Every single transition** writes immediately to the transition log — zero tolerance for data loss between transitions.
+Then `computeRawScore` reads the buffer:
+1. Sum `sign × volDelta` across the buffer (signed volume).
+2. Sum `|volDelta|` (total volume).
+3. Compute ratio = signed/total, clamped to [-1, +1].
+4. VP = 50 + ratio × 40, clamped to [0, 100].
+5. Blend in 30% of direction-arrow signal for stability.
 
-**Every 15 seconds** a heartbeat writes the current timestamp to a dedicated localStorage key.
-
-**Every 30 seconds** even when paused or idle, the full state saves as a safety net.
-
-**On page load**, MomScanner restores every ticker's complete state — preserving `firstSeen` timestamps so warmup periods don't restart, and resuming the rolling stability windows mid-stream. If the heartbeat shows a gap greater than 5 minutes from the last alive timestamp, a toast warns you that some data in that window may be missing.
-
-**Session boundary detection** checks the date stamp of the saved snapshot. If it's from a previous day or older than 12 hours, MomScanner starts a fresh session automatically and shows a toast explaining what happened.
-
-### What this means for your workflow
-
-You can now:
-- Deploy code updates mid-session without losing data
-- Lock your computer for lunch and return without restarting
-- Recover from a browser crash with at most 30 seconds of lost state
-- Run multi-day continuous sessions if you want (each market day starts fresh)
-
-### Safety constraints
-
-- localStorage has a ~5-10 MB limit per domain. The full state snapshot is small (typically under 100 KB even with 100 active tickers), so this isn't a concern in practice.
-- If localStorage somehow fills up, console warnings will appear but the app continues running on in-memory state.
+This means VP only swings strongly when there's **persistent directional volume**. A stock oscillating up-and-down on equal volume produces VP near 50, not the noisy bid/ask-position signal of v5.
 
 ---
 
-## Part 5 — Time-of-Day Adaptive Tuning (v5)
-
-### Why this exists
-
-Your INTC observation revealed it: morning momentum and late-day momentum are structurally different. A score threshold tuned for 10:30 AM breakouts is too strict for 3:30 PM re-accelerations, and vice versa. v5 applies different settings automatically based on ET time.
+## Part 7 — Time-of-Day Adaptive Tuning (carried from v5, modified in v6)
 
 ### The three windows
 
-**Open (9:30–10:00 AM ET)** — score threshold raised to 80, smoothing lag 90s, min streak 90s, min qualifying cycles 9. The market is at its noisiest, spreads are widest, signals are least reliable. Strict thresholds keep junk out.
+**Open (9:30–10:00 AM ET)** — score threshold 80, smoothing 90s, streak 90s, min qual 9/10. Strict.
 
-**Midday (10:00 AM–3:00 PM ET)** — your default settings: score 75, smoothing 60s, streak 60s, 8/10 qualifying. Standard momentum trading window.
+**Midday (10:00 AM–3:00 PM ET)** — your default settings: score 75, smoothing 60s, streak 60s, qual 8/10.
 
-**Close window (3:00–4:00 PM ET)** — score threshold lowered to 65, smoothing lag 20s, min streak 20s, min qualifying cycles 6. Late-day moves are short and need fast signals. The 3:30-4:00 PM acceleration that drove INTC qualifies under these settings but never under the default.
+**Close window (3:00–4:00 PM ET)** — score threshold 65, smoothing 20s, streak 20s, min qual 6/10. Loose, for catching late-day breakouts.
 
-### How to control it
+### v6 modification: low-vol override
 
-Settings → **Time-of-Day Tuning (v5)** has a single toggle: enable adaptive thresholds. Default is ON. When OFF, your manual settings apply at all times.
+When the regime is `low-vol`, the close-window overlay is **suppressed**. Instead, the midday-late thresholds apply throughout the close window. This prevents flickering candidates on dead afternoons.
 
-The header shows a "ToD: [window]" badge so you always know which set of thresholds is currently active. The badge updates automatically every minute.
+Practical effect: on a low-vol day, the Acceleration section may still appear (breakout detector is independent), but the regular Candidates section will be less generous than it would be on a normal trending day during the close window.
 
-### Trade behavior implications
+### Disabling ToD entirely
 
-- **Don't be alarmed if Candidates is empty 9:30-10:00.** Strict open window settings deliberately avoid promotions in the noisy first 30 minutes.
-- **Expect more candidates in the close window.** Looser settings + acceleration section + breakout detection all activate at 3:00 PM. This is when MomScanner is most aggressive.
-- **Manual override** — if you want loose settings all day, disable ToD tuning and lower your base thresholds. If you want strict all day, disable ToD and raise them.
+In Settings → Time-of-Day Tuning, uncheck the toggle. Your manual base settings then apply at all times.
 
 ---
 
-## Part 6 — Consolidation Breakout Detector & Acceleration Section (v5)
+## Part 8 — How to trade with MomScanner v6
 
-### What the breakout detector does
+### Pre-market (before 9:30 AM ET)
 
-For every ticker on every poll, MomScanner maintains two rolling price windows: the last 5 minutes (short) and the last 30 minutes (long). It computes:
-
-1. **Range ratio** — short-window range divided by long-window range (excluding the short window itself, so the long window is the "consolidation" baseline)
-2. **Price position** — is the current price outside the long-window high/low?
-3. **Move from average** — how far is current price from the long-window mean?
-
-A score is built from these signals (range ratio ≥1.5 → +30 points, ≥2.5 → +20 more, price outside range → +30, move from avg ≥0.5% → +10, ≥1.5% → +10 more). When the breakout score reaches 60 with price actually outside the range, the ticker is flagged as an active breakout.
-
-### The Brk column
-
-Shows the breakout state as a small badge:
-
-- **`BRK`** in solid amber — active breakout, score ≥ 60 with price outside range. This is the trade signal.
-- **Number 30-59** in faded amber — building breakout, range expanding but price still in range. Watch closely.
-- **`—`** — no breakout signal, normal consolidation behavior.
-
-Hover the badge for the breakout direction (up or down) and exact score.
-
-### The Acceleration section
-
-A new top-tier section above Candidates that appears **only during the close window (3:00-4:00 PM ET)**. It contains tickers with active breakouts (Brk = BRK badge) that aren't already in Candidates. This is critical because:
-
-- A breakout often triggers before the standard 6-criteria check would qualify the ticker.
-- During the close window, most of the move could be over by the time stability gates clear.
-- Acceleration entries are intentionally fast — you trade them with tighter exits.
-
-The Acceleration section sorts by breakout score (not smooth score). Rows have an amber left-border to visually distinguish them from regular candidates.
-
-### How to trade Acceleration entries
-
-These are different from regular Candidates:
-
-- **Confirmation needed** — verify the breakout is real (price clearly outside range, volume picking up) before entering.
-- **Tighter exits** — set a profit target of 15-25% on the option, NOT the 50%+ you might wait for on a midday candidate. Late-day moves don't last.
-- **Time stop is shorter** — if it's not working in 5-7 minutes, exit. There's not enough session left to wait.
-- **Skip if Flips ≥ 4** — the ticker has been choppy today, don't trust the breakout.
-
----
-
-## Part 7 — Market Regime Indicator (v5)
-
-### What it does
-
-The regime banner at the top of the screen classifies today's market based on SPY's last 30 minutes of price action. Five possible states:
-
-- **Trending Bullish** — SPY net up ≥0.6% with limited reversals. Stability streak requirement auto-loosens to 0.75x (45s instead of 60s) for faster entries.
-- **Trending Bearish** — same as above but downward.
-- **Choppy** — many direction reversals in the window. Stability streak auto-tightens to 1.5x (90s instead of 60s) to filter out noise. Detail text reminds you to trade only high-conviction setups.
-- **Low Volatility Drift** — tight range, small net move. Detail text warns that momentum trades may be scarce.
-- **Mixed** — some movement but not clearly trending or choppy. Default settings.
-
-### Requirements
-
-- **SPY must be in your active scan**. The regime detector reads SPY's price from the regular quote feed.
-- **At least 6 SPY data points** are needed (around 30 seconds of polling) before classification activates.
-- The banner shows "unknown · Tip: Add SPY to the scan for market regime detection" until SPY data flows.
-
-### How it changes behavior
-
-When the regime is choppy or trending, your effective stability streak duration is automatically multiplied (1.5x for choppy, 0.75x for trending). This is a passive overlay — your saved Stability settings aren't changed, just the values used for runtime calculations. The regime confidence (0-100%) is shown in the detail text.
-
-### Trading guidance by regime
-
-- **Trending bullish/bearish** — bias toward your dominant-direction trades (more calls in trending-bull, more puts in trending-bear). Faster promotions mean earlier entries.
-- **Choppy** — be picky. Most candidates will be traps. Look for high Streak (90s+), low Flips (≤2), and DRIFT momentum type.
-- **Low-vol** — consider sitting out. Premium decay will be your enemy on quiet days.
-- **Mixed** — trade as normal but maintain extra discipline on exits.
-
----
-
-## Part 8 — Momentum Type Classifier (v5)
-
-### What it does
-
-For each ticker that's currently a candidate (bull or bear), MomScanner examines the score's recent velocity and total movement to assign one of three types:
-
-**DRIFT** — score climbed steadily over 3+ minutes, with moderate velocity (under 8 points/minute). Total gain is at least 6 points across the 5-minute window. This is the slow-and-steady pattern that gives you time to find a strike, fill at midpoint, and ride the move. **Ideal for your $100 OTM strategy.**
-
-**THRUST** — score spiked rapidly (8+ points/minute) with a total gain ≥12 points. This is a sharp short-lived move, often news-driven. Risky for retail entries because by the time you can fill an OTM option, the move may have already exhausted itself. **Trade only if you can fill within seconds.**
-
-**REVR (Reversal)** — current candidacy follows a recent direction reversal (flip count ≥ 2). The momentum is real but the prior counter-direction move may have set up a snap-back. Higher risk/reward profile. **Only for experienced moves.**
-
-### How to use it
-
-The Type column in the table shows a small colored badge with the type abbreviation. Hover for the score velocity in points/minute.
-
-Trading guidance:
-- **DRIFT** — primary entry candidates. Take these with confidence.
-- **THRUST** — only enter if you can fill an option order in under 30 seconds AND the spread is tight.
-- **REVR** — verify with a recent sparkline showing the prior reversal pattern. Skip if uncertain.
-
-The session summary at end-of-day shows a count of each type encountered, helping you correlate which types produced your best trades.
-
----
-
-## Part 9 — End-of-Session Summary Report (v5)
-
-### How to generate
-
-Click the **Session Summary** button in the table footer (next to Export CSV). A new browser window opens with a one-page report.
-
-### What's included
-
-**Stats tiles:** tickers tracked, total transitions, promotions, demotions, average candidate duration, longest candidate, peak score across all tickers, momentum-type breakdown (drift/thrust/reversal counts).
-
-**Top 10 longest-running candidates table:** each ticker with total time spent in candidate status, number of separate candidate sessions, average duration per session, dominant direction, peak score reached, momentum type, % change for the day, flip count.
-
-**Most-flipped tickers (avoid list):** the 5 tickers with the most state transitions today. These were traps — note them for tomorrow.
-
-**Market regime breakdown:** transitions logged under each regime classification. Tells you what kind of day it was.
-
-**Key takeaways:** automatically generated bullets based on what kind of day it was. Examples:
-- "Candidate durations were short (<1 min avg). Today was choppy. Consider tightening stability for tomorrow."
-- "Dominated by DRIFT momentum — ideal for your OTM options strategy."
-- "Most-flipped ticker: ORCL (11 transitions). Note for tomorrow: this symbol was indecisive."
-
-### Saving the report
-
-Click the **Print / Save as PDF** button at the bottom of the report. Use your browser's print dialog and select "Save as PDF" as the destination. Save by date (e.g., `MomScanner_Summary_2026-04-24.pdf`) for your trading journal.
-
-The summary is also saved to localStorage by date — future versions can browse historical summaries from prior sessions.
-
----
-
-## Part 10 — How to trade with MomScanner v5
-
-### Pre-market
-
-Open MomScanner. Run thinkorswim scan. Note pre-market movers but don't paste yet.
+Open MomScanner (your session resumes from yesterday or starts fresh based on the date check). Run thinkorswim scan. Note pre-market movers but don't paste yet.
 
 ### 9:30 AM — Initial setup
 
@@ -337,58 +281,48 @@ Paste thinkorswim results into MomScanner. **Make sure SPY is included.** Don't 
 
 ### 9:30-10:00 — Observation window
 
-All rows in warmup. Regime banner activates within ~30 seconds once SPY data flows. Watch the regime classification — it tells you what kind of day to expect. Open window deliberately produces few or no candidates.
+All rows in warmup. Regime banner activates within 30 seconds. **Watch the regime classification carefully** — if it's low-vol or choppy from the start, expect the Don't-Trade warning to appear by 10:30 AM.
 
 ### 10:00 AM — Midday window opens
 
-ToD badge shifts to "Midday." Standard thresholds active. Candidates section starts populating as tickers complete their 3-minute warmup AND meet the stability gate (8/10 qualifying cycles + 60-second sustained streak).
+ToD shifts to "Midday." Standard thresholds active. Candidates section starts populating. With v6's L1-aware scoring, candidates should be **more stable** than in v5.
 
 ### Trading midday candidates
 
 When a ticker appears in Candidates, check:
-1. **Streak > 1:30**
-2. **Flips < 4** (no warning icon)
-3. **Sparkline rising**
-4. **Type = DRIFT** (preferred) or THRUST (only if you can fill fast)
+1. **Streak > 1:30** — sustained qualification
+2. **Flips < 4** — no warning icon
+3. **Sparkline rising steadily** — not spike-and-flatten
+4. **Type tag visible** (now appears at promotion time in v6) — DRIFT preferred, THRUST risky, REVR cautious
+5. **No Don't-Trade banner active** — if it's red, reconsider
 
-If all check out → Robinhood → 2-5 DTE → one strike OTM → limit at midpoint.
+If all five check out → Robinhood → 2-5 DTE → one strike OTM → limit at midpoint.
 
-### Exit triggers (same as v4)
+### Exit triggers (same as v5)
 
 1. Streak breaks (drops to `—`) → sell at bid
-2. Demoted from Candidates → check Session Log for reason → limit sell above bid
+2. Demoted from Candidates → check Session Log → limit sell above bid
 3. ΔScr decelerating → take profit
 4. Score below 60 → market sell
-5. 20-minute time stop without 15%+ option move → exit
+5. 20-min time stop without 15%+ option move → exit
 
-### 3:00 PM — Close window opens
+### 3:00 PM — Close window
 
-ToD badge shifts to "Close Window." Looser thresholds active. **Acceleration section appears at the top of the table.** Watch it carefully. Late-day breakouts will populate here.
+ToD shifts to "Close Window." On a normal day, looser thresholds activate and Acceleration section appears. **On a low-vol day (v6 override), close-window thresholds stay at midday-strict**, so don't expect the same flood of late-day candidates that v5 would have produced on a quiet afternoon.
 
 ### Trading Acceleration entries
 
-Different rules than midday:
-- **Faster exits** — target 15-25% on the option, not 50%+
-- **Shorter time stop** — exit at 5-7 minutes if not working
-- **Skip if Flips ≥ 4** — choppy ticker, don't trust the breakout
-- **Verify the breakout is real** — Brk = BRK badge, price visibly outside the recent range
+Same rules as v5: faster exits (15-25% target), shorter time stop (5-7 min), skip if Flips ≥ 4.
 
 ### 4:00 PM — Session close
 
-Click **Session Summary** to generate the report. Print to PDF. Review:
-- Did your trades cluster around DRIFT setups (good) or THRUST (mixed)?
-- What was the Avg Candidate duration? Tells you what tomorrow's stability tuning should be.
-- Which tickers were most-flipped? Add them to a mental "avoid in similar market conditions" list.
-
-### Post-session
-
-Export Active CSV and Transitions CSV for archival. Save the PDF summary by date. After 5-10 sessions, patterns will emerge in your summaries that drive concrete tuning decisions.
+Click **Session Summary** to generate the report. Print to PDF. Review takeaways.
 
 ---
 
-## Part 11 — Settings reference
+## Part 9 — Settings reference
 
-All settings accessible via the gear icon (top right). Slide-out drawer.
+All settings via the gear icon (top right). Slide-out drawer.
 
 ### Data Source
 Tradier or Schwab keys, callback URL, environment selection, OAuth connect.
@@ -396,75 +330,75 @@ Tradier or Schwab keys, callback URL, environment selection, OAuth connect.
 ### Options Liquidity Filter
 Penny Pilot toggle, max spread %, min OI, max DTE, options check interval.
 
-### Score Weights
-5 weighted components summing to 100. Defaults: VP 30, RV 20, PE 20, VE 15, OA 15.
+### Score Weights (v6 defaults)
+- Volume Pressure: **10**
+- Relative Volume: **26**
+- Price vs EMA: **26**
+- Volatility Expansion: **19**
+- Options Activity: **19**
 
 ### Time-of-Day Tuning (v5)
-Enable/disable adaptive thresholds. When enabled, score threshold and stability streak duration auto-adjust by market hour.
+Toggle. Adapts score thresholds and stability streak by market hour.
 
 ### Stability Filter (v4)
-- Window: 10 cycles default
-- Min Qual: 8 of 10 default
-- Min Streak: 60 seconds default (overridden by ToD when enabled)
-- Flip Warn: 8 default
+- Window: 10 cycles
+- Min Qual: 8 of 10
+- Min Streak: 60 seconds (overridden by ToD)
+- Flip Warn: 8
 
 ### Behavior
-- Smoothing Lag: 60s default (overridden by ToD when enabled)
+- Smoothing Lag: 60s (overridden by ToD)
 - High Threshold: 75 (overridden by ToD)
 - Low Threshold: 25
 - Min Refresh: 5 seconds
 
 ---
 
-## Part 12 — Troubleshooting
+## Part 10 — Troubleshooting
 
-**No candidates appearing in the morning:** The Open window (9:30-10:00) deliberately uses strict thresholds. This is normal. Wait for 10:00 AM when ToD shifts to Midday.
+**Don't-Trade banner won't go away:** Click the Dismiss button to hide it for the current session. It will not reappear until you reload the page (or until the conditions change again on a future session).
 
-**Regime banner stuck at "unknown":** SPY isn't in your active scan. Add SPY. Wait 30 seconds for data to accumulate.
+**Volume Pressure component shows 50 always:** The tick buffer needs at least 2 polls with a volume delta to start producing values. First minute or so after a ticker is added, VP will be 50. After that it should respond. If it stays at 50 indefinitely, the volume field may not be flowing — check Test Feed.
 
-**Session resumed with warning toast:** A heartbeat gap was detected (laptop sleep, browser closed, OS crash, etc.). Some transitions in that gap are missing. Continue the session normally — current state is intact.
+**Score decreased compared to v5 on the same ticker:** Expected. v6 weights VP at 10% instead of 30%, and the new VP is more accurate (less noise). Lower your score threshold to 73 or 72 if you want to preserve similar promotion rates.
 
-**Breakout column shows numbers but no `BRK`:** Range expansion is happening but price hasn't broken out yet. Watch closely — it's building.
+**Candidates appear less often than in v5:** Also expected, especially on choppy/low-vol days. The L1-aware scoring is more discerning.
 
-**Acceleration section empty during close window:** No active breakouts. Either there are no good late-day setups or your active scan doesn't include the right tickers. Re-run thinkorswim scan and paste fresh symbols.
+**Type column populates immediately on promotion now:** This is the v6 fix. In v5 it appeared only after demotion.
 
-**Type column shows `—`:** The ticker isn't currently a candidate, or score history is too short for classification. Will populate once it qualifies.
+**Regime banner stuck at "unknown":** SPY isn't in your active scan. Add SPY.
+
+**Session resumed with warning toast:** Heartbeat gap detected. Some transitions in that gap are missing. Continue normally.
+
+**Breakout column shows numbers but no `BRK`:** Range expansion is happening but price hasn't broken out yet. Watch closely.
+
+**Acceleration section empty during close window:** Expected on low-vol days (v6 suppresses the section's looser thresholds). Otherwise, no breakouts have triggered yet.
 
 **Session Summary popup blocked:** Allow popups for your GitHub Pages domain.
-
-**Stability filter still feels too strict despite ToD:** You can lower the base settings (Stability Filter section in settings). The ToD overlay multiplies/reduces those base values, so reducing the base reduces the overall effective values.
-
-**Tickers from yesterday won't go away:** v5 should auto-detect a new session, but if it doesn't, click **Clear Active** in the input bar (history archive is preserved).
-
-**Score velocity in tooltip seems wrong:** Score velocity is computed over the last 2 minutes of polling. If a ticker just promoted, velocity will read low until enough samples accumulate.
-
-**Feed errors:** Re-paste API key, ensure Production environment, click Test Feed.
 
 **Code update not showing:** GitHub Pages caches 30-60 seconds. Hard refresh with Ctrl+Shift+R.
 
 ---
 
-## Part 13 — Data safety
+## Part 11 — Data safety
 
 All API keys and trading data stored in browser localStorage only. Never transmitted except directly to Tradier/Schwab API endpoints. Repository contains no keys. Public repo is safe.
 
-The session snapshot stored by v5's persistence layer is comprehensive — it includes price history and score history. This data also stays in your browser. To clear all data, use the gear → clear keys, plus Clear Active, Clear History, and Clear Log buttons. Or clear site data in your browser settings.
+The session snapshot stored by v5/v6's persistence layer is comprehensive. To clear all data: gear → clear keys, plus Clear Active, Clear History, and Clear Log buttons. Or clear site data in browser settings.
 
 ---
 
-## Part 14 — Roadmap (still pending)
+## Part 12 — Roadmap
 
-These were proposed but not yet built:
+Still pending features:
 
 1. **Schwab token auto-refresh** before 30-minute expiration
-2. **L2 WebSocket streaming** for true sub-second updates and lower API usage
-3. **True buy/sell volume pressure** from Tradier Time & Sales stream
-4. **Sound or browser notification** when a candidate promotes or breakout activates
-5. **Spread trend indicator** showing whether ATM spread is widening or tightening over the last 5 minutes
-6. **Historical ATR/EMA** from a proper bars endpoint (replaces the rolling approximation)
-7. **Multi-day summary archive browser** to compare today's session against prior sessions visually
-8. **Auto-export at 4:00 PM** — automatic CSV + PDF summary generation when the close window ends, no manual click needed
-9. **Per-ticker notes** — small text field per ticker for your own annotations during the session
-10. **Backtest mode** — replay a past session from the Active CSV to test new settings before live use
-
-Tell me when you want any of these.
+2. **WebSocket streaming** if your data tier supports it (would replace polling)
+3. **Sound or browser notification** when a candidate promotes or breakout activates
+4. **Spread trend indicator** showing whether ATM spread is widening or tightening
+5. **Historical ATR/EMA** from a proper bars endpoint (replaces rolling approximation)
+6. **Multi-day summary archive browser** to compare today's session against prior sessions
+7. **Auto-export at 4:00 PM** — automatic CSV + PDF generation when the close window ends
+8. **Per-ticker notes** — small text field per ticker for your own annotations during the session
+9. **Backtest mode** — replay a past session from CSVs to test new settings
+10. **Score component breakdown panel** — click a ticker to see live VP/RV/PE/VE/OA values, useful for debugging why a stock is or isn't qualifying
