@@ -3,24 +3,91 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MomScanner v6</title>
+<title>MomScanner v7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
+  /* === Theme defaults (HIGH CONTRAST mode is now default for v7) === */
+  /* Backgrounds */
+  --bg-base:#000000;
+  --bg-panel:#0d1218;
+  --bg-panel-2:#1a2230;
+  --bg-row:#080c10;
+
+  /* Borders — brighter than v6 for visibility */
+  --border:#3a4a60;
+  --border-soft:#2a3548;
+
+  /* Text — three tiers, all WCAG AAA against bg-base */
+  --text:#ffffff;        /* primary — pure white */
+  --text-dim:#c8d4e6;    /* secondary — high contrast */
+  --text-faint:#94a3b8;  /* tertiary — readable but soft */
+
+  /* Accents — brightened for high-contrast mode */
+  --accent:#ffd24a;
+  --accent-soft:#ffd24a22;
+
+  /* Direction colors — brightened */
+  --up:#3eff95;
+  --up-soft:#3eff9522;
+  --down:#ff5c6f;
+  --down-soft:#ff5c6f22;
+
+  --neutral:#8896aa;
+  --blue:#5ab1ff;
+
+  /* Options spread pills */
+  --spread-good-bg:rgba(62,255,149,0.18);
+  --spread-good-fg:#3eff95;
+  --spread-warn-bg:rgba(255,210,74,0.18);
+  --spread-warn-fg:#ffd24a;
+  --spread-bad-bg:rgba(255,92,111,0.20);
+  --spread-bad-fg:#ff5c6f;
+
+  /* Layer accents (v7) */
+  --layer-trend:#5ab1ff;
+  --layer-trend-soft:rgba(90,177,255,0.15);
+  --layer-breakout:#ffd24a;
+  --layer-breakout-soft:rgba(255,210,74,0.15);
+  --layer-pressure:#ff8fc7;
+  --layer-pressure-soft:rgba(255,143,199,0.15);
+
+  /* === Font scaling (v7 accessibility) === */
+  --font-base:14px;       /* user-adjustable 11-22px */
+  --font-table:13px;      /* derived */
+  --font-small:12px;      /* derived */
+  --font-tiny:10px;       /* derived */
+  --font-large:18px;      /* derived */
+}
+/* Theme variants applied by toggling html.theme-X classes */
+html.theme-medium-contrast {
+  --bg-base:#0a0e12; --bg-panel:#121820; --bg-panel-2:#1a2230; --bg-row:#0f1419;
+  --border:#2d394c; --border-soft:#22293a;
+  --text:#e8eef5; --text-dim:#a6b3c4; --text-faint:#6b7a8e;
+  --accent:#ffbb33; --accent-soft:#ffbb3322;
+  --up:#22e29a; --up-soft:#22e29a18; --down:#ff5266; --down-soft:#ff526618;
+  --neutral:#7a8699; --blue:#5ab1ff;
+}
+html.theme-original {
   --bg-base:#0a0e12; --bg-panel:#121820; --bg-panel-2:#1a2230; --bg-row:#0f1419;
   --border:#253040; --border-soft:#1c2633;
   --text:#d9e2ec; --text-dim:#8895a7; --text-faint:#4a5a6e;
   --accent:#ffaa00; --accent-soft:#ffaa0018;
   --up:#00d68a; --up-soft:#00d68a15; --down:#ff4d5e; --down-soft:#ff4d5e15;
   --neutral:#6c7a8e; --blue:#4aa3ff;
-  --spread-good-bg:rgba(0,214,138,0.14); --spread-good-fg:#00d68a;
-  --spread-warn-bg:rgba(255,170,0,0.14); --spread-warn-fg:#ffaa00;
-  --spread-bad-bg:rgba(255,77,94,0.14); --spread-bad-fg:#ff4d5e;
+}
+html.theme-light {
+  --bg-base:#f5f7fa; --bg-panel:#ffffff; --bg-panel-2:#eef2f7; --bg-row:#f9fbfd;
+  --border:#9aabbf; --border-soft:#c4ccd6;
+  --text:#000000; --text-dim:#2a3548; --text-faint:#5a6c80;
+  --accent:#b87a00; --accent-soft:#b87a0018;
+  --up:#0a8550; --up-soft:#0a855018; --down:#c41e3a; --down-soft:#c41e3a18;
+  --neutral:#5a6c80; --blue:#0058b0;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg-base);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.45;min-height:100vh;overflow-x:hidden}
+html,body{background:var(--bg-base);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:var(--font-base);line-height:1.5;min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at top left,rgba(255,170,0,0.03),transparent 50%),radial-gradient(ellipse at bottom right,rgba(74,163,255,0.02),transparent 50%);pointer-events:none;z-index:0}
 .app{position:relative;z-index:1;padding:12px 16px;max-width:1400px;margin:0 auto}
 
@@ -31,8 +98,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .hdr-name{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--text);letter-spacing:-0.3px}
 .hdr-sub{font-size:9px;color:var(--text-faint);letter-spacing:1.5px;text-transform:uppercase}
 .hdr-right{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-dim)}
-.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:var(--bg-row);border:1px solid var(--border-soft);border-radius:3px;font-size:10.5px;color:var(--text-dim);white-space:nowrap}
-.pill strong{color:var(--text);font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg-row);border:1px solid var(--border);border-radius:3px;font-size:calc(var(--font-base) - 2px);color:var(--text);white-space:nowrap;font-weight:500}
+.pill strong{color:var(--accent);font-weight:700}
 .dot-live{width:5px;height:5px;border-radius:50%;background:var(--up);display:inline-block;box-shadow:0 0 6px var(--up);animation:pulse 2s infinite}
 .dot-err{width:5px;height:5px;border-radius:50%;background:var(--down);display:inline-block}
 .dot-warn{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
@@ -59,15 +126,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .sec-head{display:flex;align-items:center;gap:7px;padding:7px 14px}
 .sec-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .sec-dot-outline{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--text-faint);flex-shrink:0}
-.sec-label{font-family:'Syne',sans-serif;font-weight:600;font-size:11.5px;letter-spacing:.5px;text-transform:uppercase}
-.sec-sub{font-size:10.5px;color:var(--text-faint)}
+.sec-label{font-family:'Syne',sans-serif;font-weight:700;font-size:calc(var(--font-base) + 1px);letter-spacing:.5px;text-transform:uppercase}
+.sec-sub{font-size:calc(var(--font-base) - 1px);color:var(--text-dim)}
 .sec-divider{border-top:2px solid var(--border)}
 
 /* Grid rows */
 .tbl-scroll{overflow-x:auto;max-height:65vh;overflow-y:auto}
-.g-row{display:grid;grid-template-columns:24px 58px minmax(50px,1fr) 48px 48px 50px 40px 72px 22px 40px 48px 48px 32px 34px 36px;gap:0;padding:7px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums}
+.g-row{display:grid;grid-template-columns:24px 60px minmax(50px,0.7fr) 50px 50px 44px 56px 56px 56px 64px 26px 54px 54px 38px 40px;gap:4px;padding:8px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums;font-size:var(--font-base)}
 .g-row:hover{background:var(--bg-panel-2)}
-.g-hdr{font-size:9.5px;color:var(--text-faint);letter-spacing:.6px;text-transform:uppercase;border-bottom:1px solid var(--border);padding:5px 14px;position:sticky;top:0;background:var(--bg-panel-2);z-index:2}
+.g-hdr{font-size:calc(var(--font-base) - 2px);color:var(--text);font-weight:600;letter-spacing:.7px;text-transform:uppercase;border-bottom:2px solid var(--border);padding:8px 14px;position:sticky;top:0;background:var(--bg-panel-2);z-index:2}
 .g-hdr:hover{background:var(--bg-panel-2)}
 .r{text-align:right}.c{text-align:center}
 
@@ -114,12 +181,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .warn-chop{display:inline-block;margin-left:4px;width:13px;height:13px;line-height:13px;text-align:center;border-radius:50%;background:var(--down-soft);color:var(--down);font-size:9px;font-weight:700;cursor:help}
 
 /* Ticker name */
-.tkr{font-weight:700;font-size:13.5px;color:var(--text);letter-spacing:.3px}
+.tkr{font-weight:700;font-size:calc(var(--font-base) + 2px);color:var(--text);letter-spacing:.3px}
 
 /* Score bar */
 .score-bar{position:relative;width:38px;height:15px;background:var(--bg-base);border:1px solid var(--border-soft);border-radius:2px;overflow:hidden;display:inline-block}
 .score-fill{position:absolute;top:0;left:0;bottom:0;transition:width .6s cubic-bezier(.4,0,.2,1),background .4s}
 .score-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:var(--text);text-shadow:0 1px 2px rgba(0,0,0,.8)}
+
+/* v7: Layer score cells (Trend/Breakout/Pressure) */
+.layer-score{position:relative;width:50px;height:18px;background:var(--bg-base);border:1px solid var(--border);border-radius:2px;overflow:hidden;display:inline-block}
+.layer-fill{position:absolute;top:0;left:0;bottom:0;transition:width .6s cubic-bezier(.4,0,.2,1),background .4s,opacity .4s}
+.layer-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:calc(var(--font-base) - 2px);color:var(--text);text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.layer-state-dot{position:absolute;right:2px;top:2px;width:6px;height:6px;border-radius:50%;box-shadow:0 0 4px currentColor}
+
+/* v7: Layer-specific row tint when ticker is in the layer's accel section */
+.row-layer-trend{border-left:3px solid var(--layer-trend);background:var(--layer-trend-soft)}
+.row-layer-breakout{border-left:3px solid var(--layer-breakout);background:var(--layer-breakout-soft)}
+.row-layer-pressure{border-left:3px solid var(--layer-pressure);background:var(--layer-pressure-soft)}
 
 /* Spread pill */
 .spill{font-size:10px;padding:2px 5px;border-radius:3px;font-weight:600;display:inline-block}
@@ -163,14 +241,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .sg h4{font-family:'Syne',sans-serif;font-weight:600;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border-soft)}
 .fld{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
 .fld:last-child{margin-bottom:0}
-.fld label{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-weight:500}
+.fld label{font-size:calc(var(--font-base) - 2px);color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .fld input,.fld select{background:var(--bg-base);border:1px solid var(--border);color:var(--text);padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:11px;border-radius:2px;outline:none}
 .fld input:focus,.fld select:focus{border-color:var(--accent)}
 .rng-row{display:flex;align-items:center;gap:8px}
 .rng-row input[type=range]{flex:1;accent-color:var(--accent)}
 .rng-val{font-size:11px;color:var(--accent);min-width:36px;text-align:right;font-weight:500}
 .w-row{display:grid;grid-template-columns:120px 1fr 32px;gap:6px;align-items:center;margin-bottom:5px}
-.w-row label{font-size:9.5px;color:var(--text-dim);text-transform:uppercase}
+.w-row label{font-size:calc(var(--font-base) - 2px);color:var(--text);text-transform:uppercase;font-weight:500}
 .w-sum{text-align:right;font-size:10px;color:var(--text-faint);margin-top:4px;padding-top:4px;border-top:1px solid var(--border-soft)}
 .w-sum.bad{color:var(--down)}
 .btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
@@ -192,7 +270,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .stat-tile .sval.accent{color:var(--accent)}
 .hist-tbl-wrap{overflow-x:auto;max-height:25vh}
 .hist-tbl{width:100%;border-collapse:collapse;font-size:11px}
-.hist-tbl thead th{position:sticky;top:0;background:var(--bg-panel-2);color:var(--text-faint);font-weight:500;font-size:9px;letter-spacing:.8px;text-transform:uppercase;padding:6px 6px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+.hist-tbl thead th{position:sticky;top:0;background:var(--bg-panel-2);color:var(--text);font-weight:600;font-size:calc(var(--font-base) - 2px);letter-spacing:.6px;text-transform:uppercase;padding:8px 6px;text-align:right;border-bottom:2px solid var(--border);white-space:nowrap}
 .hist-tbl thead th:first-child{text-align:left}
 .hist-tbl tbody td{padding:5px 6px;text-align:right;white-space:nowrap}
 .hist-tbl tbody td:first-child{text-align:left}
@@ -234,7 +312,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="hdr-left">
     <div class="hdr-mark"></div>
     <span class="hdr-name">MomScanner</span>
-    <span class="hdr-sub">MOMENTUM TERMINAL v6</span>
+    <span class="hdr-sub">MOMENTUM TERMINAL v7</span>
   </div>
   <div class="hdr-right">
     <div class="pill"><span id="feedDot" class="dot-warn"></span> <strong id="feedLabel">—</strong></div>
@@ -258,22 +336,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <!-- INFO -->
 <div class="info-box" id="infoBox">
-  <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Score formula &middot; Trading signals</div>
+  <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Three-layer scoring &middot; Trading signals</div>
   <div class="info-body">
-    <p><strong>v6 Score Rebalancing (L1-aware):</strong> Score weights re-tuned for L1 data feeds. Volume Pressure dropped to 10% (was 30%) because the bid/ask position proxy was unreliable on L1 due to potentially-stale snapshots. Relative Volume and Price vs EMA boosted to 26% each (the most reliable L1-derived signals). Volatility Expansion and Options Activity now 19% each.</p>
-    <p style="margin-top:6px"><strong>v6 Volume Pressure Rewrite:</strong> The VP component no longer uses the bid/ask position proxy. Instead it tracks tick-direction (last price up/down vs previous poll) volume-weighted over a 30-second sliding window. Cleaner signal on L1 because it relies only on the <code>last</code> field, which is the most reliable L1-tier data point.</p>
-    <p style="margin-top:6px"><strong>v6 Don't-Trade Warning:</strong> Prominent red banner appears when regime is low-vol or choppy AND no candidate has lasted &gt;30 seconds in the last hour. Helps you recognize untradable days early instead of refreshing through dead market hours.</p>
-    <p style="margin-top:6px"><strong>v6 Low-Vol Override:</strong> On low-vol days, the close-window thresholds no longer loosen. Instead, midday-strict thresholds apply throughout the close window because late-day flickers in low-vol environments are even less reliable than usual.</p>
-    <p style="margin-top:6px"><strong>v6 Bug Fixes:</strong> Momentum Type now tags candidates at promotion time (was tagging only after demotion in v5). Breakout detector memory bloat fix for long sessions.</p>
-    <p style="margin-top:10px"><strong>v5 Time-of-Day Tuning:</strong> Thresholds auto-adapt based on market time. Strictest at the 9:30 open (lots of noise), default midday, loosest in the 3:00-4:00 close window (catches late-day moves). Disable in Settings if you prefer manual control.</p>
-    <p style="margin-top:6px"><strong>v5 Acceleration Section:</strong> A new third tier appears above Candidates during the 3:00-4:00 PM close window. Shows tickers with active <em>consolidation breakout</em> patterns (last 5 min range &gt; 1.5x the previous 25 min, with price breaking out). These are late-day moves that wouldn't qualify under standard criteria but are tradable with tight exits.</p>
-    <p style="margin-top:6px"><strong>v5 Regime Indicator:</strong> Banner at the top labels today's market (trending/choppy/low-vol) based on SPY behavior over the last 30 min. Add SPY to your scan for this to activate. On choppy days, stability requirements auto-tighten.</p>
-    <p style="margin-top:6px"><strong>v5 Momentum Type (Type column):</strong> <span class="mtype mtype-drift">DRIFT</span> steady climb, ideal for OTM options · <span class="mtype mtype-thrust">THRUST</span> sharp short move, risky entry · <span class="mtype mtype-reversal">REVR</span> direction flip, high risk/reward.</p>
-    <p style="margin-top:6px"><strong>v5 Breakout Column (Brk):</strong> "BRK" badge when consolidation breakout is active. Number (0-100) shown when building but not yet triggered. Value ≥ 60 with price outside range = active.</p>
-    <p style="margin-top:6px"><strong>v5 Bulletproof Persistence:</strong> Every transition and poll is saved to localStorage immediately. A mid-session refresh or accidental tab close will resume exactly where you left off. A heartbeat warns if a long outage is detected.</p>
-    <p style="margin-top:6px"><strong>v5 Session Summary:</strong> Click "Session Summary" in the footer (or at end of session) to generate a one-page HTML report with top candidates, flip stats, momentum-type breakdown, and regime analysis. Printable / save as PDF.</p>
-    <p style="margin-top:6px"><strong>v4 Stability &middot; Streak &middot; Flips:</strong> Tickers must qualify in 8/10 cycles AND hold direction for 60s before promoting. Streak column = current qualifying duration. Flips column = transitions today (high = choppy, avoid). Warning icon appears next to ticker name if flip count exceeds threshold.</p>
-    <p style="margin-top:6px"><strong>v6 Score components (default weights):</strong> Volume Pressure 10% &middot; Relative Volume 26% &middot; Price vs EMA 26% &middot; Volatility Expansion 19% &middot; Options Activity 19%.</p>
+    <p><strong>v7 Three-Layer Architecture:</strong> The single blended score from v6 is replaced by three independent layer scores. Each layer captures a different time horizon and signal type. A ticker is shown in the Candidates section corresponding to its strongest active layer.</p>
+    <p style="margin-top:8px"><strong style="color:var(--layer-trend)">TREND Layer (slow, 30min-hours)</strong> — Built from VWAP. Captures the "3% in 3 hours" subtle moves. Three sub-components: price-vs-VWAP position (ATR-normalized), VWAP slope direction, and RVol+pctChg confirmation. Smoothing time constant 5 min. Default qualifying threshold 65 with 120s minimum streak. This is the slow, sustained-trend signal.</p>
+    <p style="margin-top:6px"><strong style="color:var(--layer-breakout)">BREAKOUT Layer (medium, 5-30min)</strong> — Range expansion + VWAP band breaks. Built on v6's consolidation breakout detector with VWAP-derived bands and volume confirmation. Smoothing time constant 90s. Default threshold 70 with 30s minimum streak. Fires when consolidation gives way to expansion.</p>
+    <p style="margin-top:6px"><strong style="color:var(--layer-pressure)">PRESSURE Layer (fast, 30s-5min)</strong> — Three OFI proxies blended: (1) average bid-ask position of recent prints over 60s, (2) volume rate vs session average, (3) size-weighted decaying tick clusters with burst detection. Smoothing 30s. Default threshold 72 with 15s minimum streak. Captures aggressive intraday flow.</p>
+    <p style="margin-top:8px"><strong>VWAP Tracking (v7):</strong> A session-cumulative VWAP is computed per ticker from price+volume snapshots. The VWAP column shows current price as a percentage relative to VWAP — green when above, red when below. VWAP slope (history over 30 min) feeds the Trend layer.</p>
+    <p style="margin-top:6px"><strong>OFI Proxies (v7):</strong> Order Flow Imbalance in the academic sense requires L2 depth-of-book data. On L1, three proxies approximate it: average quote-position over 60s (smooths out per-tick noise that hurt v5), volume-rate ratio (recent vs session average), and size-weighted exponentially-decaying tick clusters with burst detector for institutional sweeps. None is reliable alone; the blend is robust.</p>
+    <p style="margin-top:8px"><strong>Three independent classifications:</strong> Each layer has its own qualifying threshold, stability window, minimum streak, and flip count. A ticker's flip count is the sum across all three layers. The Streak column shows the longest active streak across any layer.</p>
+    <p style="margin-top:6px"><strong>Reading the layer score columns:</strong> Each cell shows a horizontal bar with the score number, colored in the layer's accent. Brighter color = higher score. A small dot indicator appears when the layer is currently in bull/bear state (passed stability gate).</p>
+    <p style="margin-top:6px"><strong>v7 Accessibility:</strong> Default theme is high-contrast (pure black bg, pure white text). Three additional themes available in Settings → Accessibility (medium contrast, original v6 colors, light mode). Base font size adjustable 11px-22px. All UI elements scale together.</p>
+    <p style="margin-top:6px"><strong>Carryover from v5/v6:</strong> Bulletproof persistence, time-of-day tuning, regime indicator, momentum-type classifier, Don't-Trade warning, session summary report.</p>
   </div>
 </div>
 
@@ -296,27 +370,39 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <!-- MAIN TABLE -->
 <div class="tbl-panel">
-  <!-- Acceleration section (v5: close-window breakouts) -->
-  <div class="sec-head" id="secAccelHead" style="display:none">
-    <div class="sec-dot" style="background:var(--accent);box-shadow:0 0 6px var(--accent)"></div>
-    <span class="sec-label" style="color:var(--accent)">Acceleration · Late-Day Breakouts</span>
-    <span class="sec-sub" id="accelCount">0 detected</span>
-  </div>
-  <div id="accelBody"></div>
-  <!-- Candidates section -->
-  <div class="sec-head" id="secCandHead">
-    <div class="sec-dot" style="background:var(--up)"></div>
-    <span class="sec-label" style="color:var(--text)">Candidates</span>
-    <span class="sec-sub" id="candCount">0 actionable</span>
-  </div>
   <div class="tbl-scroll" id="tblScroll">
     <!-- Header row -->
     <div class="g-row g-hdr">
       <div></div><div>Ticker</div><div class="r">Last</div><div class="r">%Chg</div>
-      <div class="r">Sprd%</div><div class="r">RVol</div><div class="r">Score</div>
-      <div class="c">Trend</div><div class="c">Dir</div><div class="r">&Delta;Scr</div><div class="r">Streak</div><div class="c">Type</div><div class="r">Brk</div><div class="r">Flips</div><div class="r">Min</div>
+      <div class="r">Sprd%</div><div class="r">RVol</div>
+      <div class="c">Trend</div><div class="c">Brkout</div><div class="c">Press</div>
+      <div class="r">VWAP</div><div class="c">Dir</div><div class="r">Streak</div><div class="c">Type</div><div class="r">Flips</div><div class="r">Min</div>
     </div>
-    <div id="candBody"></div>
+
+    <!-- Trend Candidates (slow signal, 30min-hours horizon) -->
+    <div class="sec-head" id="secTrendHead" style="display:none">
+      <div class="sec-dot" style="background:var(--layer-trend);box-shadow:0 0 6px var(--layer-trend)"></div>
+      <span class="sec-label" style="color:var(--layer-trend)">Trend Candidates</span>
+      <span class="sec-sub" id="trendCount">0 actionable</span>
+    </div>
+    <div id="trendBody"></div>
+
+    <!-- Breakout Candidates (medium signal, 5-30min horizon) -->
+    <div class="sec-head" id="secBreakoutHead" style="display:none">
+      <div class="sec-dot" style="background:var(--layer-breakout);box-shadow:0 0 6px var(--layer-breakout)"></div>
+      <span class="sec-label" style="color:var(--layer-breakout)">Breakout Candidates</span>
+      <span class="sec-sub" id="breakoutCount">0 actionable</span>
+    </div>
+    <div id="breakoutBody"></div>
+
+    <!-- Pressure Candidates (fast signal, 30s-5min horizon) -->
+    <div class="sec-head" id="secPressureHead" style="display:none">
+      <div class="sec-dot" style="background:var(--layer-pressure);box-shadow:0 0 6px var(--layer-pressure)"></div>
+      <span class="sec-label" style="color:var(--layer-pressure)">Pressure Candidates</span>
+      <span class="sec-sub" id="pressureCount">0 actionable</span>
+    </div>
+    <div id="pressureBody"></div>
+
     <!-- Watching section -->
     <div class="sec-head sec-divider" id="secWatchHead">
       <div class="sec-dot-outline"></div>
@@ -439,6 +525,27 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 
   <div class="sg">
+    <h4>Accessibility (v7)</h4>
+    <div class="fld">
+      <label>Theme</label>
+      <select id="a11yTheme" class="sel" style="width:100%">
+        <option value="high-contrast">High Contrast (default)</option>
+        <option value="medium-contrast">Medium Contrast</option>
+        <option value="original">Original v6</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+    <div class="fld">
+      <label>Base Font Size</label>
+      <div class="rng-row"><input type="range" min="11" max="22" step="1" id="a11yFontSize" value="14"/><span class="rng-val" id="a11yFontSizeVal">14px</span></div>
+    </div>
+    <div style="font-size:calc(var(--font-base) - 3px);color:var(--text-dim);line-height:1.5;margin-top:6px">
+      <strong>High Contrast</strong> uses pure black background with pure white text — recommended for visual clarity. Larger font sizes scale all UI elements.
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="saveA11y()">Save Accessibility</button></div>
+  </div>
+
+  <div class="sg">
     <h4>Time-of-Day Tuning (v5)</h4>
     <div class="fld"><label class="chk-row"><input type="checkbox" id="todEnabled" checked/><span>Enable adaptive thresholds by time of day</span></label></div>
     <div style="font-size:9.5px;color:var(--text-faint);line-height:1.5;margin-top:6px">
@@ -475,7 +582,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="toast-c" id="toastContainer"></div>
 
 <script>
-const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'ms_schwab_key',schwabSecret:'ms_schwab_secret',schwabCallback:'ms_schwab_callback',schwabToken:'ms_schwab_token',feed:'ms_feed',weights:'ms_weights',behavior:'ms_behavior',optionsFilter:'ms_options_filter',stability:'ms_stability',history:'ms_history_v1',activeTickers:'ms_active_tickers',transitions:'ms_transitions_v1',activeState:'ms_active_state_v5',heartbeat:'ms_heartbeat_v5',sessionSummaries:'ms_summaries_v5',regimeSettings:'ms_regime_v5',todSettings:'ms_tod_v5'};
+const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'ms_schwab_key',schwabSecret:'ms_schwab_secret',schwabCallback:'ms_schwab_callback',schwabToken:'ms_schwab_token',feed:'ms_feed',weights:'ms_weights',behavior:'ms_behavior',optionsFilter:'ms_options_filter',stability:'ms_stability',history:'ms_history_v1',activeTickers:'ms_active_tickers',transitions:'ms_transitions_v1',activeState:'ms_active_state_v5',heartbeat:'ms_heartbeat_v5',sessionSummaries:'ms_summaries_v5',regimeSettings:'ms_regime_v5',todSettings:'ms_tod_v5',a11y:'ms_a11y_v7',layerThresholds:'ms_layer_thresholds_v7'};
 
 const PENNY_PILOT=new Set(['AAPL','MSFT','AMZN','GOOGL','GOOG','META','NVDA','TSLA','NFLX','ADBE','CRM','ORCL','CSCO','INTC','AMD','QCOM','AVGO','TXN','MU','AMAT','LRCX','KLAC','ASML','ARM','SPY','QQQ','IWM','DIA','XLF','XLE','XLK','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','SMH','SOXX','SOXL','SOXS','TQQQ','SQQQ','UVXY','VXX','SVXY','TLT','TBT','GLD','SLV','USO','UNG','EEM','EFA','FXI','EWZ','INDA','HYG','JNK','LQD','AGG','VTI','VOO','VTV','VUG','ARKK','ARKQ','ARKW','ARKG','ARKF','MAGS','IBIT','FBTC','ETHA','SPXL','SPXS','TNA','TZA','LABU','LABD','FAS','FAZ','JPM','BAC','WFC','C','GS','MS','BRK.B','V','MA','AXP','PYPL','SQ','BLK','SCHW','COF','USB','PNC','TFC','MET','PRU','AIG','AFL','ALL','TRV','CB','COIN','HOOD','SOFI','AFRM','UPST','LMND','WMT','COST','TGT','HD','LOW','NKE','SBUX','MCD','CMG','DIS','LULU','ULTA','ROST','TJX','BBY','KSS','M','GPS','DKS','DG','DLTR','FL','ANF','AEO','BURL','GE','CAT','DE','BA','LMT','RTX','NOC','GD','HON','MMM','UPS','FDX','UNP','CSX','NSC','F','GM','RIVN','LCID','NIO','XPEV','LI','FSR','NKLA','CCL','RCL','NCLH','AAL','UAL','DAL','LUV','XOM','CVX','COP','OXY','SLB','HAL','EOG','PXD','MRO','DVN','APA','HES','FANG','PSX','VLO','MPC','JNJ','PFE','MRK','LLY','ABBV','BMY','GILD','AMGN','BIIB','REGN','VRTX','MRNA','BNTX','NVAX','PLUG','FCEL','SAVA','UNH','CVS','CI','HUM','ANTM','HCA','TMO','DHR','ABT','MDT','SYK','BSX','ISRG','ZTS','HOLX','IDXX','DXCM','PODD','IQV','T','VZ','TMUS','CHTR','CMCSA','DISH','PARA','WBD','FOX','FOXA','ROKU','SPOT','SHOP','EBAY','ETSY','PINS','SNAP','UBER','LYFT','ABNB','DASH','BKNG','EXPE','TRIP','DKNG','PENN','CZR','WYNN','MGM','LVS','RBLX','EA','TTWO','ATVI','U','DDOG','NET','SNOW','CRWD','ZS','PANW','FTNT','OKTA','PLTR','TEAM','MDB','DOCU','ZM','WORK','SPLK','TWLO','ESTC','CFLT','GTLB','AMT','PLD','CCI','EQIX','DLR','O','SPG','AVB','EQR','WELL','PSA','VICI','VTR','SBAC','SO','NEE','DUK','D','AEP','EXC','SRE','XEL','PCG','ED','EIX','PEG','WEC','ES','ETR','DTE','PPL','CMS','AES','AEE','FCX','NEM','GOLD','AA','X','CLF','MT','VALE','RIO','BHP','SCCO','STLD','NUE','CF','MOS','FMC','LIN','APD','SHW','ECL','PPG','DD','DOW','LYB','CE','ALB','WRB','BABA','JD','PDD','BIDU','NTES','TCOM','TME','VIPS','BILI','IQ','TAL','EDU','YMM','DIDI','BZ','ZH','MNSO','TIGR','FUTU','DQ','JKS','CSIQ','BEKE','GME','AMC','BBBY','BB','NOK','WISH','CLOV','WKHS','TLRY','CGC','ACB','SNDL','HEXO','APHA','CRON','MARA','RIOT','CLSK','HUT','BITF','BTBT','CAN','CIFR','WULF','APLD','HIVE','GREE','SMCI','VRT','POWL','BE','FLNC','STEM','CHPT','BLNK','EVGO','WKSP','GOEV','RIDE','HYLN','QS','MVIS','LAZR','VLDR','INVZ','OUST','IBM','HPQ','HPE','DELL','STX','WDC','NTAP','ANET','ZBRA','JNPR','MRVL','ADI','NXPI','ON','SWKS','QRVO','TER','ACLS','AEHR','RMBS','SITM','WOLF','CRDO','NVTS','IOT','SPT','BOX','DBX','HUBS','NOW','WDAY','INTU','ADP','PAYX','PAYC','CDAY','PCTY','FICO','FDS','MORN','MCO','SPGI','VRSK','BR','IT','ACN','CTSH','INFY','WIT','EPAM','GLOB','EXLS','FIS','FISV','GPN','WU','DFS','SYF','ALLY','CIT','NAVI','SLM','LEND']);
 
@@ -551,6 +658,38 @@ function loadTodSettings(){
   qs('todEnabled').checked=tod.enabled!==false;
 }
 
+// ---- v7 ACCESSIBILITY ----
+function getA11y(){return lsGet(LS_KEYS.a11y,{theme:'high-contrast',fontSize:14})}
+function applyA11y(){
+  const a=getA11y();
+  // Remove all theme classes, add the active one
+  const html=document.documentElement;
+  html.classList.remove('theme-high-contrast','theme-medium-contrast','theme-original','theme-light');
+  if(a.theme!=='high-contrast'){
+    html.classList.add('theme-'+a.theme);
+  }
+  // Apply font size as a CSS custom property
+  html.style.setProperty('--font-base',(a.fontSize||14)+'px');
+}
+function loadA11y(){
+  const a=getA11y();
+  if(qs('a11yTheme'))qs('a11yTheme').value=a.theme||'high-contrast';
+  if(qs('a11yFontSize')){
+    qs('a11yFontSize').value=a.fontSize||14;
+    qs('a11yFontSizeVal').textContent=(a.fontSize||14)+'px';
+  }
+  applyA11y();
+}
+function saveA11y(){
+  const a={
+    theme:qs('a11yTheme').value,
+    fontSize:+qs('a11yFontSize').value
+  };
+  lsSet(LS_KEYS.a11y,a);
+  applyA11y();
+  toast('Accessibility settings saved','ok');
+}
+
 // Effective settings that incorporate ToD overlay + regime adjustments
 function getEffectiveBehavior(){
   const base=getBehavior();
@@ -593,7 +732,12 @@ function getEffectiveStability(){
 function updateFeedPill(){const f=qs('feedSelect').value,dot=qs('feedDot'),lbl=qs('feedLabel');dot.className=state.lastFeedStatus==='ok'?'dot-live':state.lastFeedStatus==='err'?'dot-err':'dot-warn';lbl.textContent=f==='tradier'?'Tradier L1':(state.schwabAccessToken?'Schwab':'Schwab (no token)')}
 
 // ---- TICKER MGMT ----
-function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null,priceRangeShort:[],priceRangeLong:[],breakoutScore:0,breakoutActive:false,scoreVelocity:0,momentumType:null,peakScore:50,peakScoreAt:null,accelCandidate:false,tickBuffer:[],_lastTickPrice:null,_lastTickVolume:null}}
+function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null,priceRangeShort:[],priceRangeLong:[],breakoutScore:0,breakoutActive:false,scoreVelocity:0,momentumType:null,peakScore:50,peakScoreAt:null,accelCandidate:false,tickBuffer:[],_lastTickPrice:null,_lastTickVolume:null,
+trendScore:50,trendScoreRaw:50,firstSeenTrend:null,peakTrend:50,peakTrendAt:null,
+breakoutScoreSm:50,breakoutScoreRaw:50,firstSeenBreakout:null,peakBreakout:50,peakBreakoutAt:null,breakoutDir:'flat',
+pressureScore:50,pressureScoreRaw:50,firstSeenPressure:null,peakPressure:50,peakPressureAt:null,
+vwapState:null,bidAskHistory:[],layerStability:{trend:{},breakout:{},pressure:{}}
+}}
 
 function addTickers(){const raw=qs('tickerInput').value,parts=raw.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s));if(!parts.length){toast('No valid tickers','err');return}const of=getOptionsFilter();let added=0,rejected=0;const now=Date.now(),rejList=[];parts.forEach(t=>{if(of.pennyPilotOnly&&!PENNY_PILOT.has(t)){rejected++;rejList.push(t);return}if(!state.active.has(t)){state.active.set(t,makeTicker(t,now));state.priceHistory.set(t,[]);state.scoreHistory.set(t,[]);added++}});qs('tickerInput').value='';saveActiveTickers();render();let msg=`Added ${added} ticker${added!==1?'s':''}`;if(rejected)msg+=` · ${rejected} rejected (non-Penny-Pilot: ${rejList.slice(0,4).join(', ')}${rejList.length>4?'…':''})`;toast(msg,rejected>added?'err':'ok',4500)}
 
@@ -693,50 +837,281 @@ function restoreActiveTickers(){
 }
 
 // ---- SCORING ----
-function computeRawScore(d){
-  // V6: Volume Pressure rewrite — tick-direction over 30s sliding window, volume-weighted.
-  // No longer relies on bid/ask position proxy (which was unreliable on L1 due to
-  // potentially-stale bid/ask snapshots). Uses last-price tick direction + volume delta.
-  let vp=50;
-  if(d.tickBuffer&&d.tickBuffer.length>=2){
-    // each tick has {t, sign, volDelta} where sign is +1 (up tick), -1 (down tick), 0 (flat)
-    // compute net signed volume vs total volume in the window
-    let netSigned=0,totalVol=0;
-    d.tickBuffer.forEach(tk=>{
-      netSigned+=tk.sign*tk.volDelta;
-      totalVol+=Math.abs(tk.volDelta);
-    });
-    if(totalVol>0){
-      const ratio=netSigned/totalVol; // -1 to +1
-      vp=clamp(50+ratio*40); // ±40 swing from neutral
-    }
+// ============================================================
+// V7: THREE-LAYER MOMENTUM ARCHITECTURE
+// Each layer outputs an independent 0-100 score.
+// LAYER 1 - TREND: slow signals (30 min - hours). VWAP-anchored.
+// LAYER 2 - BREAKOUT: medium signals (5-30 min). Range expansion.
+// LAYER 3 - PRESSURE: fast signals (30s-5min). OFI proxies.
+// ============================================================
+
+// ---- VWAP TRACKING (v7) ----
+// Maintains a session-cumulative VWAP per ticker from price+volume snapshots.
+// Less accurate than true tick-level VWAP, but works on L1 polling data.
+function updateVWAP(d){
+  if(!d.last||d.volume==null)return;
+  if(!d.vwapState){
+    d.vwapState={
+      cumPV:0,    // cumulative price*volumeDelta
+      cumV:0,     // cumulative volumeDelta
+      lastVol:d.volume,
+      vwap:d.last,
+      vwapHistory:[] // {t,vwap} for slope calc, last 30 min
+    };
+    return;
   }
-  // small smoothing toward direction30s for continuity
-  if(d.direction30s!=null)vp=.7*vp+.3*(50+d.direction30s*30);
-  vp=clamp(vp);
-  let rv=50;if(d.relVol!=null&&d.relVol>0)rv=clamp(50+25*Math.log2(d.relVol));
-  let pe=50;if(d.last&&d.ema9&&d.atr&&d.atr>0){pe=clamp(50+((d.last-d.ema9)/d.atr)*20)}else if(d.pctChg!=null)pe=clamp(50+d.pctChg*5);
-  let ve=50;if(d.atr&&d.atr>0&&d.last&&d.pctChg!=null){const tr=Math.abs(d.pctChg/100)*d.last;ve=clamp(50+(tr/d.atr-.5)*60)}
-  let oa=50;if(d.optOI&&d.optOI>0&&d.optSpreadPct!=null){const ss=100-Math.min(100,d.optSpreadPct*4),os=clamp(50+15*Math.log2(Math.max(.1,d.optOI/500)));oa=clamp(.6*ss+.4*os)}
-  d.components={VP:vp,RV:rv,PE:pe,VE:ve,OA:oa};const w=getWeights();return clamp(vp*w.VP+rv*w.RV+pe*w.PE+ve*w.VE+oa*w.OA)
+  const s=d.vwapState;
+  const volDelta=Math.max(0,d.volume-s.lastVol);
+  if(volDelta>0){
+    s.cumPV+=d.last*volDelta;
+    s.cumV+=volDelta;
+    if(s.cumV>0)s.vwap=s.cumPV/s.cumV;
+  }
+  s.lastVol=d.volume;
+  // Append to history for slope tracking
+  const now=Date.now();
+  s.vwapHistory.push({t:now,vwap:s.vwap});
+  const cut=now-30*60000;
+  while(s.vwapHistory.length&&s.vwapHistory[0].t<cut)s.vwapHistory.shift();
+  if(s.vwapHistory.length>400)s.vwapHistory=s.vwapHistory.slice(-400);
 }
 
-// V6: per-poll tick buffer maintenance.
-// Called from pollOnce BEFORE computeRawScore. Tracks last-price ticks with volume deltas
-// over a 30-second sliding window. This replaces the L2-required bid/ask-position proxy.
+// ---- LAYER 1: TREND SCORE (v7) ----
+// Built primarily from VWAP. Captures the "3% in 3 hours" subtle moves.
+// Returns 0-100. >70 = strong trend. 50 = neutral.
+function computeTrendScore(d){
+  let score=50;
+  const s=d.vwapState;
+  if(!s||!d.last)return 50;
+
+  // Component A (40 pts): Price vs VWAP, ATR-normalized
+  // Sustained price above VWAP = institutional buying. Below = selling.
+  let aboveVwapBonus=0;
+  if(d.atr&&d.atr>0){
+    const distAtr=(d.last-s.vwap)/d.atr;
+    aboveVwapBonus=clamp(distAtr*20,-30,30); // ±30 swing
+  } else if(s.vwap>0){
+    const pctDist=(d.last-s.vwap)/s.vwap;
+    aboveVwapBonus=clamp(pctDist*1000,-30,30);
+  }
+  score+=aboveVwapBonus;
+
+  // Component B (15 pts): VWAP slope direction
+  // Rising VWAP with price above = strongest trend signal
+  if(s.vwapHistory.length>=10){
+    const oldVwap=s.vwapHistory[0].vwap;
+    const newVwap=s.vwapHistory[s.vwapHistory.length-1].vwap;
+    const slopePct=(newVwap-oldVwap)/oldVwap;
+    const slopeBonus=clamp(slopePct*4000,-15,15); // ±15 swing
+    // Boost if slope direction matches price-vs-vwap direction
+    if(Math.sign(slopeBonus)===Math.sign(aboveVwapBonus)){
+      score+=slopeBonus;
+    } else {
+      score+=slopeBonus*0.4; // dampen if conflicting
+    }
+  }
+
+  // Component C (10 pts): Relative Volume confirmation
+  // High RVol + above VWAP = trend with conviction
+  if(d.relVol!=null&&d.relVol>0){
+    const rvBonus=clamp(Math.log2(d.relVol)*5,-10,10);
+    if(Math.sign(rvBonus)===Math.sign(aboveVwapBonus)||aboveVwapBonus===0){
+      score+=rvBonus;
+    }
+  }
+
+  // Component D (10 pts): Pct change of day
+  // Reinforces directional bias when material
+  if(d.pctChg!=null){
+    score+=clamp(d.pctChg*1.2,-10,10);
+  }
+
+  return clamp(score);
+}
+
+// ---- LAYER 2: BREAKOUT SCORE (v7) ----
+// Range expansion + VWAP band breaks. 5-30 minute horizon.
+// Returns 0-100. >75 = active breakout.
+function computeBreakoutScore(d){
+  let score=50;
+  // Use the existing breakoutScore (0-100) computed by updateBreakoutDetection
+  // but blend with VWAP-band check and volume confirmation.
+  if(d.breakoutScore!=null){
+    score=d.breakoutScore;
+  }
+  const s=d.vwapState;
+  if(!s||s.vwapHistory.length<10)return score;
+
+  // VWAP band breakouts - compute approx 1-stddev band from history
+  const vwapPrices=s.vwapHistory.slice(-30).map(h=>h.vwap);
+  if(vwapPrices.length>=5){
+    const mean=vwapPrices.reduce((a,b)=>a+b,0)/vwapPrices.length;
+    const variance=vwapPrices.reduce((a,b)=>a+(b-mean)**2,0)/vwapPrices.length;
+    const sd=Math.sqrt(variance);
+    if(sd>0&&d.last){
+      // Synthetic band based on price excursion vs VWAP std
+      const upperBand=s.vwap+1.5*sd;
+      const lowerBand=s.vwap-1.5*sd;
+      if(d.last>upperBand)score=Math.min(100,score+15);
+      else if(d.last<lowerBand)score=Math.min(100,score+15);
+    }
+  }
+
+  // Volume confirmation: breakout without volume is suspect
+  if(d.relVol!=null){
+    if(d.relVol>=2)score=Math.min(100,score+5);
+    else if(d.relVol<1)score=Math.max(0,score-10);
+  }
+
+  return clamp(score);
+}
+
+// ---- LAYER 3: PRESSURE SCORE (v7) ----
+// Three OFI-style proxies blended. Fast 30s-5min horizon.
+// Returns 0-100. >75 = significant pressure.
+function computePressureScore(d){
+  let score=50;
+  if(!d.tickBuffer||d.tickBuffer.length<2)return 50;
+
+  // Proxy 1 (40 pts): Quote-position OFI averaged over 60s
+  // Where in the bid-ask spread did recent trades land?
+  // Average smooths out per-tick timing noise that hurt v5.
+  let qpoSum=0,qpoCount=0;
+  if(d.bidAskHistory){
+    const cut=Date.now()-60000;
+    d.bidAskHistory.forEach(h=>{
+      if(h.t>=cut&&h.bid&&h.ask&&h.last&&h.ask>h.bid){
+        const pos=(h.last-h.bid)/(h.ask-h.bid);
+        qpoSum+=clamp(pos,0,1);
+        qpoCount++;
+      }
+    });
+  }
+  if(qpoCount>=3){
+    const avgPos=qpoSum/qpoCount;
+    // 0.5 = neutral. >0.6 buying pressure, <0.4 selling pressure.
+    score+=(avgPos-0.5)*60; // ±30 swing
+  }
+
+  // Proxy 2 (30 pts): Volume-rate OFI
+  // Volume in last 60s relative to session average per-minute rate
+  if(d.tickBuffer.length>0&&d.firstSeen){
+    const recentVol=d.tickBuffer.reduce((a,t)=>a+Math.abs(t.volDelta),0);
+    const sessionMin=Math.max(1,(Date.now()-d.firstSeen)/60000);
+    const sessionVolPerMin=(d.volume||0)/sessionMin;
+    if(sessionVolPerMin>0){
+      // Adjust for the actual buffer span (typically 60s)
+      const bufferSpanMin=Math.min(1,(Date.now()-d.tickBuffer[0].t)/60000);
+      const recentRate=recentVol/Math.max(0.1,bufferSpanMin);
+      const ratio=recentRate/sessionVolPerMin;
+      // Net direction from buffer
+      let netSigned=0,totalVol=0;
+      d.tickBuffer.forEach(tk=>{netSigned+=tk.sign*tk.volDelta;totalVol+=Math.abs(tk.volDelta)});
+      const dirRatio=totalVol>0?netSigned/totalVol:0;
+      // Volume rate amplifies directional signal
+      const volRateBonus=clamp(Math.log2(Math.max(0.1,ratio))*10,-15,15);
+      score+=volRateBonus*Math.sign(dirRatio||0.001);
+    }
+  }
+
+  // Proxy 3 (30 pts): Size-weighted tick clusters with burst detection
+  // Sum tick sign*sqrt(volDelta) with exponential decay; bonus for bursts.
+  let weightedSum=0,weightedTotal=0;
+  const now=Date.now();
+  d.tickBuffer.forEach(tk=>{
+    const ageS=(now-tk.t)/1000;
+    const decay=Math.exp(-ageS/20); // half-life ~14s
+    const sizeWeight=Math.sqrt(Math.abs(tk.volDelta));
+    weightedSum+=tk.sign*sizeWeight*decay;
+    weightedTotal+=sizeWeight*decay;
+  });
+  if(weightedTotal>0){
+    const ratio=weightedSum/weightedTotal;
+    score+=ratio*15; // up to ±15
+  }
+  // Burst detection: 5+ same-direction ticks in a 10s window
+  let lastBurstSign=0,burstCount=0,burstBonus=0;
+  for(let i=d.tickBuffer.length-1;i>=0;i--){
+    const tk=d.tickBuffer[i];
+    if((now-tk.t)/1000>10)break;
+    if(tk.sign!==0&&tk.sign===lastBurstSign){burstCount++}
+    else if(tk.sign!==0){lastBurstSign=tk.sign;burstCount=1}
+  }
+  if(burstCount>=5)burstBonus=lastBurstSign*8;
+  score+=burstBonus;
+
+  return clamp(score);
+}
+
+// ---- LAYER UPDATE (v7) — called from pollOnce ----
+// Computes all three layer scores, applies per-layer smoothing, populates ticker fields.
+function updateLayers(d){
+  // Compute raw layer scores
+  const trendRaw=computeTrendScore(d);
+  const breakoutRaw=computeBreakoutScore(d);
+  const pressureRaw=computePressureScore(d);
+
+  // Per-layer smoothing time constants (different horizons)
+  const dt=state.refreshIntervalSec;
+  const aTrend=1-Math.exp(-dt/300);    // 5-min smoothing for slow layer
+  const aBreak=1-Math.exp(-dt/90);     // 1.5-min smoothing
+  const aPress=1-Math.exp(-dt/30);     // 30s smoothing for fast layer
+
+  if(d.trendScore==null)d.trendScore=trendRaw;else d.trendScore+=aTrend*(trendRaw-d.trendScore);
+  if(d.breakoutScoreSm==null)d.breakoutScoreSm=breakoutRaw;else d.breakoutScoreSm+=aBreak*(breakoutRaw-d.breakoutScoreSm);
+  if(d.pressureScore==null)d.pressureScore=pressureRaw;else d.pressureScore+=aPress*(pressureRaw-d.pressureScore);
+  d.trendScoreRaw=trendRaw;
+  d.breakoutScoreRaw=breakoutRaw;
+  d.pressureScoreRaw=pressureRaw;
+
+  // First-seen reference for each layer
+  if(d.firstSeenTrend===null||d.firstSeenTrend===undefined)d.firstSeenTrend=d.trendScore;
+  if(d.firstSeenBreakout===null||d.firstSeenBreakout===undefined)d.firstSeenBreakout=d.breakoutScoreSm;
+  if(d.firstSeenPressure===null||d.firstSeenPressure===undefined)d.firstSeenPressure=d.pressureScore;
+
+  // Track peak per layer
+  if(d.trendScore>(d.peakTrend||0)){d.peakTrend=d.trendScore;d.peakTrendAt=Date.now()}
+  if(d.breakoutScoreSm>(d.peakBreakout||0)){d.peakBreakout=d.breakoutScoreSm;d.peakBreakoutAt=Date.now()}
+  if(d.pressureScore>(d.peakPressure||0)){d.peakPressure=d.pressureScore;d.peakPressureAt=Date.now()}
+
+  // Composite for backward compatibility: max of the three layers
+  d.smoothScore=Math.max(d.trendScore,d.breakoutScoreSm,d.pressureScore);
+  d.rawScore=Math.max(trendRaw,breakoutRaw,pressureRaw);
+  if(d.firstSeenScore===null||d.firstSeenScore===undefined)d.firstSeenScore=d.smoothScore;
+}
+
+// ---- BID/ASK HISTORY (v7) — for OFI Proxy 1 ----
+function updateBidAskHistory(d){
+  if(!d.bidAskHistory)d.bidAskHistory=[];
+  const now=Date.now();
+  if(d.last!=null&&d.bid!=null&&d.ask!=null&&d.ask>d.bid){
+    d.bidAskHistory.push({t:now,bid:d.bid,ask:d.ask,last:d.last});
+  }
+  const cut=now-90000; // keep 90s, slightly more than 60s window for safety
+  while(d.bidAskHistory.length&&d.bidAskHistory[0].t<cut)d.bidAskHistory.shift();
+  if(d.bidAskHistory.length>40)d.bidAskHistory=d.bidAskHistory.slice(-40);
+}
+
+// ---- LEGACY computeRawScore (kept for backward compatibility) ----
+// V7 no longer uses this for the primary scoring path. Layer scores replace it.
+// Retained so old code paths (if any) don't break.
+function computeRawScore(d){
+  return d.smoothScore||50;
+}
+
+// ---- Tick buffer (carried over from v6) ----
 function updateTickBuffer(d){
   if(!d.tickBuffer)d.tickBuffer=[];
   const now=Date.now();
   if(d.last!=null&&d._lastTickPrice!=null&&d._lastTickVolume!=null){
     const sign=Math.sign(d.last-d._lastTickPrice);
     const volDelta=Math.max(0,(d.volume||0)-d._lastTickVolume);
-    if(volDelta>0){ // only record ticks where volume actually moved
+    if(volDelta>0){
       d.tickBuffer.push({t:now,sign,volDelta});
     }
   }
   d._lastTickPrice=d.last;
   d._lastTickVolume=d.volume;
-  // trim to last 30s
   const cut=now-30000;
   while(d.tickBuffer.length&&d.tickBuffer[0].t<cut)d.tickBuffer.shift();
 }
@@ -904,7 +1279,7 @@ function connectSchwab(){const k=qs('schwabKey').value.trim(),cb=qs('schwabCallb
 async function handleSchwabCallback(){const p=new URLSearchParams(location.search),code=p.get('code');if(!code)return;const k=lsGet(LS_KEYS.schwabKey,''),s=lsGet(LS_KEYS.schwabSecret,''),cb=lsGet(LS_KEYS.schwabCallback,'');if(!k||!s){toast('Missing Schwab creds','err');return}try{const r=await fetch('https://api.schwabapi.com/v1/oauth/token',{method:'POST',headers:{'Authorization':'Basic '+btoa(k+':'+s),'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`});if(!r.ok)throw new Error('Token HTTP '+r.status);const t=await r.json();lsSet(LS_KEYS.schwabToken,t);state.schwabAccessToken=t.access_token;history.replaceState({},document.title,cb);toast('Schwab connected','ok');updateFeedPill()}catch(e){toast('Schwab OAuth failed: '+e.message,'err')}}
 
 // ---- POLL LOOP ----
-async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateTickBuffer(d);updateDirection(d,t);updateBreakoutDetection(d);const raw=computeRawScore(d);if(d.smoothScore===50&&d.firstSeenScore===null)d.smoothScore=raw;applySmoothing(d,raw);if(d.firstSeenScore===null)d.firstSeenScore=d.smoothScore;recordScorePoint(d,t);recordHistory(d);updateMomentumType(d,t);updateStability(d)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
+async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateVWAP(d);updateTickBuffer(d);updateBidAskHistory(d);updateDirection(d,t);updateBreakoutDetection(d);updateLayers(d);recordScorePoint(d,t);recordHistory(d);updateMomentumType(d,t);updateStabilityV7(d)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
 
 // ---- HISTORY ----
 function recordHistory(d){const h=state.history[d.ticker]||{ticker:d.ticker,firstSeen:d.firstSeen,lastSeen:d.lastSeen,obsCount:0,peak:d.smoothScore,low:d.smoothScore,last:d.smoothScore,priceLast:d.last};h.lastSeen=d.lastSeen;h.obsCount++;h.peak=Math.max(h.peak,d.smoothScore);h.low=Math.min(h.low,d.smoothScore);h.last=d.smoothScore;h.priceLast=d.last;state.history[d.ticker]=h;if(h.obsCount%5===0)lsSet(LS_KEYS.history,state.history)}
@@ -1202,6 +1577,192 @@ function updateStability(d){
 
 function scoreColor(s){if(s>=75)return'var(--up)';if(s>=60)return'#7fd99a';if(s>=40)return'var(--accent)';if(s>=25)return'#ff9e6e';return'var(--down)'}
 
+// ============================================================
+// V7: PER-LAYER CLASSIFICATION
+// Each of the three layers (Trend, Breakout, Pressure) has its own
+// qualification check, stability gate, and current state.
+// ============================================================
+
+function getLayerThresholds(){
+  return lsGet(LS_KEYS.layerThresholds,{
+    trend:{highThresh:65,minQual:6,minStreak:120,window:10},
+    breakout:{highThresh:70,minQual:5,minStreak:30,window:8},
+    pressure:{highThresh:72,minQual:4,minStreak:15,window:6}
+  });
+}
+
+// Determine raw qualification for a single layer. Returns 'bull'/'bear'/'watch'/'warmup'.
+function rawQualifyLayer(d,layer){
+  const minSeen=(Date.now()-d.firstSeen)/60000;
+  if(minSeen<3)return'warmup';
+  const th=getLayerThresholds()[layer];
+  let score=null,raw=null,firstSeen=null;
+  if(layer==='trend'){score=d.trendScore;raw=d.trendScoreRaw;firstSeen=d.firstSeenTrend}
+  else if(layer==='breakout'){score=d.breakoutScoreSm;raw=d.breakoutScoreRaw;firstSeen=d.firstSeenBreakout}
+  else if(layer==='pressure'){score=d.pressureScore;raw=d.pressureScoreRaw;firstSeen=d.firstSeenPressure}
+  if(score==null)return'watch';
+
+  // Liquidity gates apply to all layers
+  const spreadOK=d.optSpreadPct!=null?d.optSpreadPct<=5:false;
+  const oiOK=d.optOI!=null?d.optOI>=1000:false;
+
+  // Score & delta
+  const delta=(firstSeen!=null)?(raw-firstSeen):0;
+  const scoreOK=score>=th.highThresh;
+  const deltaOK=delta>=0; // permissive delta check for layers
+
+  // Layer-specific direction logic
+  let dirOK=false,direction='flat';
+  if(layer==='trend'){
+    // Trend uses sustained price vs VWAP direction
+    if(d.vwapState&&d.last){
+      if(d.last>d.vwapState.vwap)direction='up';
+      else if(d.last<d.vwapState.vwap)direction='down';
+      dirOK=direction!=='flat';
+    }
+  } else if(layer==='breakout'){
+    // Breakout uses the breakoutDir set by updateBreakoutDetection
+    direction=d.breakoutDir||'flat';
+    dirOK=direction!=='flat';
+  } else if(layer==='pressure'){
+    // Pressure uses the recent tick sign average
+    if(d.tickBuffer&&d.tickBuffer.length>=3){
+      let signSum=0,wTotal=0;
+      d.tickBuffer.forEach(tk=>{signSum+=tk.sign*Math.abs(tk.volDelta);wTotal+=Math.abs(tk.volDelta)});
+      const avgSign=wTotal>0?signSum/wTotal:0;
+      if(avgSign>0.15)direction='up';
+      else if(avgSign<-0.15)direction='down';
+      dirOK=direction!=='flat';
+    }
+  }
+
+  // Volume confirmation (RVol >= 1.5x for trend/breakout, lower for pressure since it's already volume-aware)
+  let rvolOK=false;
+  if(layer==='pressure')rvolOK=d.relVol!=null&&d.relVol>=1.0;
+  else rvolOK=d.relVol!=null&&d.relVol>=1.5;
+
+  if(scoreOK&&dirOK&&deltaOK&&spreadOK&&oiOK&&rvolOK){
+    return direction==='up'?'bull':'bear';
+  }
+  return'watch';
+}
+
+// Update a single layer's stability state. Returns the displayed state.
+function updateLayerStability(d,layer){
+  const th=getLayerThresholds()[layer];
+  if(!d.layerStability)d.layerStability={trend:{},breakout:{},pressure:{}};
+  const ls=d.layerStability[layer];
+  if(!ls.window)ls.window=[];
+  if(ls.flipCount==null)ls.flipCount=0;
+  if(ls.currentState==null)ls.currentState='warmup';
+
+  const rawState=rawQualifyLayer(d,layer);
+  ls.window.push(rawState);
+  if(ls.window.length>th.window)ls.window.shift();
+
+  const bullCount=ls.window.filter(s=>s==='bull').length;
+  const bearCount=ls.window.filter(s=>s==='bear').length;
+
+  let stableState='watch';
+  if(ls.window.length>=th.minQual){
+    if(bullCount>=th.minQual)stableState='bull';
+    else if(bearCount>=th.minQual)stableState='bear';
+  }
+  const minSeen=(Date.now()-d.firstSeen)/60000;
+  if(minSeen<3)stableState='warmup';
+
+  // Streak tracking
+  const now=Date.now();
+  if(rawState==='bull'||rawState==='bear'){
+    if(ls.streakState!==rawState){
+      ls.streakState=rawState;
+      ls.streakStart=now;
+    }
+  } else {
+    ls.streakState=null;
+    ls.streakStart=null;
+  }
+
+  // Display state must pass both stability window AND min streak
+  let displayState=stableState;
+  if(displayState==='bull'||displayState==='bear'){
+    const streakSec=ls.streakStart?(now-ls.streakStart)/1000:0;
+    if(ls.streakState!==displayState||streakSec<th.minStreak){
+      displayState='watch';
+    }
+  }
+
+  // Record transition
+  if(ls.currentState!==displayState){
+    logLayerTransition(d.ticker,layer,ls.currentState,displayState,d);
+    if((ls.currentState==='bull'||ls.currentState==='bear')&&(displayState==='bull'||displayState==='bear')&&ls.currentState!==displayState){
+      ls.flipCount+=2;
+    } else if(ls.currentState==='bull'||ls.currentState==='bear'||displayState==='bull'||displayState==='bear'){
+      ls.flipCount++;
+    }
+    ls.currentState=displayState;
+    ls.lastTransitionAt=now;
+  }
+  return displayState;
+}
+
+// Update all three layers in one call
+function updateStabilityV7(d){
+  updateLayerStability(d,'trend');
+  updateLayerStability(d,'breakout');
+  updateLayerStability(d,'pressure');
+  // Composite "currentState" for backward-compat: pick the most aggressive layer's state
+  // Priority: pressure > breakout > trend (fastest signal wins for the Candidates section)
+  const states=[
+    d.layerStability.pressure?.currentState,
+    d.layerStability.breakout?.currentState,
+    d.layerStability.trend?.currentState
+  ];
+  const active=states.find(s=>s==='bull'||s==='bear');
+  d.currentState=active||(states.includes('warmup')?'warmup':'watch');
+  // Composite flip count = sum across layers
+  d.flipCount=(d.layerStability.trend?.flipCount||0)+(d.layerStability.breakout?.flipCount||0)+(d.layerStability.pressure?.flipCount||0);
+  // Composite streak = longest of any layer's active streak
+  let bestStreak=null,bestStreakState=null;
+  ['trend','breakout','pressure'].forEach(L=>{
+    const ls=d.layerStability[L];
+    if(ls&&ls.streakStart&&ls.streakState){
+      const sec=(Date.now()-ls.streakStart)/1000;
+      if(!bestStreak||sec>bestStreak){bestStreak=sec;bestStreakState=ls.streakState;d.streakStart=ls.streakStart}
+    }
+  });
+  d.streakState=bestStreakState;
+  if(!bestStreak){d.streakStart=null;d.streakState=null}
+}
+
+// Layer-aware transition log entry
+function logLayerTransition(ticker,layer,fromState,toState,d){
+  const score=layer==='trend'?d.trendScore:layer==='breakout'?d.breakoutScoreSm:d.pressureScore;
+  const rawScore=layer==='trend'?d.trendScoreRaw:layer==='breakout'?d.breakoutScoreRaw:d.pressureScoreRaw;
+  const entry={
+    t:Date.now(),
+    ticker:ticker,
+    layer:layer,
+    from:fromState,
+    to:toState,
+    score:score?.toFixed(1),
+    rawScore:rawScore?.toFixed(1),
+    price:d.last,
+    pctChg:d.pctChg?.toFixed(2),
+    vwap:d.vwapState?.vwap?.toFixed(2),
+    spreadPct:d.optSpreadPct?.toFixed(2),
+    oi:d.optOI,
+    arrow:d.arrow,
+    relVol:d.relVol?.toFixed(2),
+    momentumType:d.momentumType||'',
+    regime:state.regime||'unknown'
+  };
+  state.transitions.push(entry);
+  if(state.transitions.length>5000)state.transitions.shift();
+  lsSet(LS_KEYS.transitions,state.transitions.slice(-2000));
+  renderTransitionLog();
+}
+
 // ---- RENDER ----
 function render(){renderActive();renderHistory();updateFooterStatus()}
 
@@ -1211,100 +1772,160 @@ function renderActive(){
   // filter hidden (options liquidity)
   const visible=allArr.filter(d=>{if(d.optSpreadPct!=null&&d.optSpreadPct>of.maxSpreadPct)return false;if(d.optOI!=null&&d.optOI>0&&d.optOI<of.minOptOI)return false;return true});
   const hidden=allArr.length-visible.length;
-  // classify into three tiers: accel (breakout), candidates (stable bull/bear), watching
-  const todRegime=getTimeOfDayRegime();
-  const accelEligible=(todRegime==='close-window'); // only during 3-4 PM
-  const accel=[],candidates=[],watching=[];
+  // V7: classify into FOUR groups based on which layer(s) qualify.
+  // A ticker can appear in only one section (priority: pressure > breakout > trend > watching).
+  const trendCands=[],breakoutCands=[],pressureCands=[],watching=[];
   visible.forEach(d=>{
-    const c=d.currentState||'warmup';
-    d._class=c;
-    // acceleration check: is this a breakout in the close window?
-    // A ticker is "accel" if breakoutActive AND not already in bull/bear candidate status
-    // (so we don't double-show a ticker that's already in Candidates)
-    if(accelEligible&&d.breakoutActive&&(c==='watch'||c==='warmup')){
-      d._accel=true;
-      accel.push(d);
-    } else if(c==='bull'||c==='bear'){
-      d._accel=false;
-      candidates.push(d);
+    const ls=d.layerStability||{};
+    const trendState=ls.trend?.currentState||'warmup';
+    const breakoutState=ls.breakout?.currentState||'warmup';
+    const pressureState=ls.pressure?.currentState||'warmup';
+    // composite class for row coloring (use the most-aggressive layer)
+    const cls=pressureState==='bull'||pressureState==='bear'?pressureState
+              :breakoutState==='bull'||breakoutState==='bear'?breakoutState
+              :trendState==='bull'||trendState==='bear'?trendState
+              :(trendState==='warmup'&&breakoutState==='warmup'&&pressureState==='warmup')?'warmup':'watch';
+    d._class=cls;
+    d._accel=false;
+    // Priority routing
+    if(pressureState==='bull'||pressureState==='bear'){
+      d._layer='pressure';
+      pressureCands.push(d);
+    } else if(breakoutState==='bull'||breakoutState==='bear'){
+      d._layer='breakout';
+      breakoutCands.push(d);
+    } else if(trendState==='bull'||trendState==='bear'){
+      d._layer='trend';
+      trendCands.push(d);
     } else {
-      d._accel=false;
+      d._layer=null;
       watching.push(d);
     }
   });
-  // sort each group
-  const sorter=(a,b)=>{const ds=(b.smoothScore??0)-(a.smoothScore??0);if(Math.abs(ds)>.01)return ds;return(a.optSpreadPct??999)-(b.optSpreadPct??999)};
-  const accelSorter=(a,b)=>{const ds=(b.breakoutScore??0)-(a.breakoutScore??0);if(ds!==0)return ds;return(a.optSpreadPct??999)-(b.optSpreadPct??999)};
-  accel.sort(accelSorter);candidates.sort(sorter);watching.sort(sorter);
-  // empty state
-  if(allArr.length===0){qs('candBody').innerHTML='';qs('watchBody').innerHTML='';qs('accelBody').innerHTML='';qs('emptyState').style.display='block';qs('secCandHead').style.display='none';qs('secWatchHead').style.display='none';qs('secAccelHead').style.display='none';return}
-  qs('emptyState').style.display='none';qs('secCandHead').style.display='flex';qs('secWatchHead').style.display='flex';
-  // show/hide acceleration section based on ToD and content
-  if(accelEligible&&accel.length>0){
-    qs('secAccelHead').style.display='flex';
-    qs('accelCount').textContent=`${accel.length} detected`;
-    qs('accelBody').innerHTML=accel.map(d=>renderRow(d)).join('');
-  } else if(accelEligible){
-    qs('secAccelHead').style.display='flex';
-    qs('accelCount').textContent=`0 detected · close-window active`;
-    qs('accelBody').innerHTML='<div style="padding:10px 14px;color:var(--text-faint);font-size:11px">Monitoring for consolidation breakouts...</div>';
-  } else {
-    qs('secAccelHead').style.display='none';
-    qs('accelBody').innerHTML='';
+  // sorters
+  const trendSorter=(a,b)=>(b.trendScore??0)-(a.trendScore??0);
+  const breakSorter=(a,b)=>(b.breakoutScoreSm??0)-(a.breakoutScoreSm??0);
+  const pressSorter=(a,b)=>(b.pressureScore??0)-(a.pressureScore??0);
+  const watchSorter=(a,b)=>{const am=Math.max(a.trendScore||0,a.breakoutScoreSm||0,a.pressureScore||0);const bm=Math.max(b.trendScore||0,b.breakoutScoreSm||0,b.pressureScore||0);return bm-am};
+  trendCands.sort(trendSorter);breakoutCands.sort(breakSorter);pressureCands.sort(pressSorter);watching.sort(watchSorter);
+
+  // Empty state
+  if(allArr.length===0){
+    ['trendBody','breakoutBody','pressureBody','watchBody'].forEach(id=>{const el=qs(id);if(el)el.innerHTML=''});
+    ['secTrendHead','secBreakoutHead','secPressureHead','secWatchHead'].forEach(id=>{const el=qs(id);if(el)el.style.display='none'});
+    qs('emptyState').style.display='block';
+    return;
   }
-  qs('candCount').textContent=`${candidates.length} actionable`;
+  qs('emptyState').style.display='none';
+  qs('secWatchHead').style.display='flex';
+
+  // Render each layer section (only show header if there are candidates)
+  function renderSection(headId,countId,bodyId,arr,layerName){
+    const head=qs(headId),count=qs(countId),body=qs(bodyId);
+    if(arr.length>0){
+      head.style.display='flex';
+      count.textContent=`${arr.length} actionable`;
+      body.innerHTML=arr.map(d=>renderRow(d)).join('');
+    } else {
+      head.style.display='none';
+      body.innerHTML='';
+    }
+  }
+  renderSection('secTrendHead','trendCount','trendBody',trendCands,'trend');
+  renderSection('secBreakoutHead','breakoutCount','breakoutBody',breakoutCands,'breakout');
+  renderSection('secPressureHead','pressureCount','pressureBody',pressureCands,'pressure');
+
+  // Watching section
   qs('watchCount').textContent=`${watching.length} tracking${hidden?' · '+hidden+' hidden':''}`;
-  qs('candBody').innerHTML=candidates.length?candidates.map(d=>renderRow(d)).join(''):'<div style="padding:12px 14px;color:var(--text-faint);font-size:11px">No candidates yet — waiting for scores to qualify</div>';
   qs('watchBody').innerHTML=watching.length?watching.map(d=>renderRow(d)).join(''):'';
+
   updateRegimeBanner();
 }
 
 function renderRow(d){
-  const now=Date.now(),score=d.smoothScore??50,scoreInt=Math.round(score);
-  const delta=(d.firstSeenScore!=null)?d.rawScore-d.firstSeenScore:0;
+  const now=Date.now();
+  const trendScore=d.trendScore??50;
+  const breakoutScore=d.breakoutScoreSm??50;
+  const pressureScore=d.pressureScore??50;
   const minSeen=((now-d.firstSeen)/6e4).toFixed(1);
   const cls=d._class;
   let rowCls=cls==='bull'?'row-bull':cls==='bear'?'row-bear':cls==='warmup'?'row-fade':'';
   if(d._accel)rowCls='row-accel';
+  // Layer-specific row class for accel
+  if(d._layer==='trend')rowCls+=' row-layer-trend';
+  else if(d._layer==='breakout')rowCls+=' row-layer-breakout';
+  else if(d._layer==='pressure')rowCls+=' row-layer-pressure';
   const pctCls=(d.pctChg??0)>0?'c-up':(d.pctChg??0)<0?'c-down':'c-dim';
-  const deltaCls=delta>.5?'c-up':delta<-.5?'c-down':'c-faint';
-  // action dot - if accel, use accent color
+
+  // Action dot
   let dotCls=cls==='bull'?'act act-bull':cls==='bear'?'act act-bear':cls==='warmup'?'act act-dashed':'act act-outline';
   if(d._accel)dotCls='act';
   const dotStyle=d._accel?`style="background:var(--accent);box-shadow:0 0 6px var(--accent)"`:'';
-  // spread pill
+
+  // Spread pill
   let spreadHTML='<span class="c-faint">—</span>';
   if(d.optSpreadPct!=null){const sp=d.optSpreadPct;const c=sp<=5?'sp-g':sp<=15?'sp-w':'sp-b';spreadHTML=`<span class="spill ${c}" title="ATM ${d.optDTE}DTE · ${d.optBid?.toFixed(2)}/${d.optAsk?.toFixed(2)}">${sp.toFixed(1)}%</span>`}
-  // rel vol
+
+  // Rel vol
   const rvolHTML=d.relVol!=null?`${fmtN(d.relVol,1)}x`:'—';
   const rvolCls=d.relVol!=null?(d.relVol>=2?'':'c-dim'):'c-faint';
-  // STREAK
+
+  // Three layer score cells, each with its own bar+number
+  const trendCell=renderLayerCell(trendScore,'trend',d.layerStability?.trend?.currentState);
+  const breakoutCell=renderLayerCell(breakoutScore,'breakout',d.layerStability?.breakout?.currentState);
+  const pressureCell=renderLayerCell(pressureScore,'pressure',d.layerStability?.pressure?.currentState);
+
+  // VWAP cell - shows price relative to VWAP
+  let vwapHTML='<span class="c-faint">—</span>';
+  if(d.vwapState&&d.vwapState.vwap&&d.last){
+    const v=d.vwapState.vwap;
+    const diffPct=((d.last-v)/v)*100;
+    const cls=diffPct>0.1?'c-up':diffPct<-0.1?'c-down':'c-dim';
+    vwapHTML=`<span class="${cls}" title="VWAP $${v.toFixed(2)} · price ${diffPct>=0?'+':''}${diffPct.toFixed(2)}% vs VWAP">${diffPct>=0?'+':''}${diffPct.toFixed(2)}%</span>`;
+  }
+
+  // Direction arrow
+  const dirCell=`<span class="arr ${d.arrow==='up'?'arr-up':d.arrow==='down'?'arr-down':'arr-flat'}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span>`;
+
+  // Streak
   let streakHTML='<span class="c-faint">—</span>';
   if(d.streakStart&&d.streakState){
     const secs=Math.floor((now-d.streakStart)/1000);
     const mm=Math.floor(secs/60),ss=secs%60;
     const streakStr=mm>0?`${mm}:${ss.toString().padStart(2,'0')}`:`${ss}s`;
     const scol=d.streakState==='bull'?'c-up':'c-down';
-    streakHTML=`<span class="${scol}" title="Qualifying direction: ${d.streakState}">${streakStr}</span>`;
+    streakHTML=`<span class="${scol}" title="Longest active layer streak: ${d.streakState}">${streakStr}</span>`;
   }
-  // v5: Momentum Type badge
+
+  // Momentum type badge
   let typeHTML='<span class="c-faint">—</span>';
   if(d.momentumType){
     typeHTML=`<span class="mtype mtype-${d.momentumType}" title="Velocity: ${d.scoreVelocity.toFixed(1)} pts/min">${d.momentumType.slice(0,4)}</span>`;
   }
-  // v5: Breakout indicator
-  let brkHTML='<span class="brk brk-off">—</span>';
-  if(d.breakoutActive){
-    brkHTML=`<span class="brk brk-on" title="Consolidation breakout ${d.breakoutDir||''} · score ${d.breakoutScore}">BRK</span>`;
-  } else if(d.breakoutScore>=30){
-    brkHTML=`<span class="brk" style="color:var(--accent);opacity:0.6" title="Building breakout · ${d.breakoutScore}/100">${d.breakoutScore}</span>`;
-  }
-  // FLIPS + choppy warning
+
+  // Flips + choppy warning
   const stab=getEffectiveStability();
-  const flipCls=d.flipCount>=stab.flipWarn?'c-down':d.flipCount>=Math.floor(stab.flipWarn/2)?'c-accent':'c-faint';
-  const flipHTML=`<span class="${flipCls}" title="State transitions today">${d.flipCount}</span>`;
-  const chopWarn=d.flipCount>=stab.flipWarn?`<span class="warn-chop" title="High flip count — indecisive ticker, trade with caution">!</span>`:'';
-  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}" ${dotStyle}></span></div><div class="tkr">${d.ticker}${chopWarn}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div><div class="r"><div class="score-bar"><div class="score-fill" style="width:${score}%;background:${scoreColor(score)}"></div><div class="score-txt">${scoreInt}</div></div></div><div class="c">${renderSparkline(d.ticker,d.arrow)}</div><div class="c"><span class="arr ${d.arrow==='up'?'arr-up':d.arrow==='down'?'arr-down':'arr-flat'}">${d.arrow==='up'?'▲':d.arrow==='down'?'▼':'━'}</span></div><div class="r ${deltaCls}">${delta>=0?'+':''}${delta.toFixed(1)}</div><div class="r">${streakHTML}</div><div class="c">${typeHTML}</div><div class="r">${brkHTML}</div><div class="r">${flipHTML}</div><div class="r c-faint">${minSeen}</div></div>`
+  const flipWarn=stab.flipWarn||8;
+  const flipCls=d.flipCount>=flipWarn?'c-down':d.flipCount>=Math.floor(flipWarn/2)?'c-accent':'c-faint';
+  const flipHTML=`<span class="${flipCls}" title="Total layer transitions today">${d.flipCount}</span>`;
+  const chopWarn=d.flipCount>=flipWarn?`<span class="warn-chop" title="High flip count — indecisive ticker">!</span>`:'';
+
+  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}" ${dotStyle}></span></div><div class="tkr">${d.ticker}${chopWarn}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div>${trendCell}${breakoutCell}${pressureCell}<div class="r">${vwapHTML}</div><div class="c">${dirCell}</div><div class="r">${streakHTML}</div><div class="c">${typeHTML}</div><div class="r">${flipHTML}</div><div class="r c-faint">${minSeen}</div></div>`
+}
+
+// Render a single layer score cell with bar and color matching the layer accent
+function renderLayerCell(score,layer,state){
+  const accentVar={trend:'--layer-trend',breakout:'--layer-breakout',pressure:'--layer-pressure'}[layer];
+  const sInt=Math.round(score);
+  // Color intensity: brighter when higher score
+  let fillColor=`var(${accentVar})`;
+  let opacity=0.3+Math.min(0.7,(score-50)/50*0.7);
+  if(score<50)opacity=0.2;
+  // Active candidates get full intensity
+  if(state==='bull'||state==='bear')opacity=1;
+  const stateMark=state==='bull'?'●':state==='bear'?'●':'';
+  const stateColor=state==='bull'?'var(--up)':state==='bear'?'var(--down)':'transparent';
+  return `<div class="c"><div class="layer-score" title="${layer.toUpperCase()} score: ${sInt}${state?(' · '+state):''}"><div class="layer-fill" style="width:${score}%;background:${fillColor};opacity:${opacity}"></div><div class="layer-txt">${sInt}</div>${stateMark?`<span class="layer-state-dot" style="background:${stateColor}"></span>`:''}</div></div>`;
 }
 
 // v5: Regime banner updater
@@ -1436,19 +2057,29 @@ let lastPollAt=0,lastOptSweepAt=0;
 function tickClock(){const now=Date.now();state.refreshIntervalSec=computeRefreshInterval();qs('refreshLabel').textContent=state.refreshIntervalSec;const elapsed=Math.floor((now-lastPollAt)/1000),remaining=Math.max(0,state.refreshIntervalSec-elapsed);qs('countdownLabel').textContent=remaining;if(state.active.size>0)renderActive();if(!state.paused&&elapsed>=state.refreshIntervalSec&&state.active.size>0){lastPollAt=now;pollOnce()}if(!state.paused&&(now-lastOptSweepAt)>=3000&&state.active.size>0){const f=qs('feedSelect').value;if(f==='tradier'){lastOptSweepAt=now;optionsSweep()}}}
 
 // ---- INIT ----
-function init(){loadKeys();loadSettings();loadOptionsFilter();loadStability();loadTodSettings();state.history=lsGet(LS_KEYS.history,{})||{};state.transitions=lsGet(LS_KEYS.transitions,[])||[];restoreActiveTickers();
+function init(){loadA11y();loadKeys();loadSettings();loadOptionsFilter();loadStability();loadTodSettings();state.history=lsGet(LS_KEYS.history,{})||{};state.transitions=lsGet(LS_KEYS.transitions,[])||[];restoreActiveTickers();
 ['VP','RV','PE','VE','OA'].forEach(k=>qs('w'+k).addEventListener('input',refreshWeightLabels));
 ['smoothLag','highThresh','lowThresh','minRefresh'].forEach(id=>qs(id).addEventListener('input',refreshBehaviorLabels));
 ['maxSpreadPct','minOptOI','maxDTE','optInterval'].forEach(id=>qs(id).addEventListener('input',refreshOptionsFilterLabels));
 ['stabWindow','stabMinQual','stabMinStreak','stabFlipWarn'].forEach(id=>qs(id).addEventListener('input',refreshStabilityLabels));
+// v7: live a11y preview as user adjusts
+qs('a11yFontSize').addEventListener('input',()=>{
+  const v=qs('a11yFontSize').value;
+  qs('a11yFontSizeVal').textContent=v+'px';
+  document.documentElement.style.setProperty('--font-base',v+'px');
+});
+qs('a11yTheme').addEventListener('change',()=>{
+  const html=document.documentElement;
+  html.classList.remove('theme-high-contrast','theme-medium-contrast','theme-original','theme-light');
+  const t=qs('a11yTheme').value;
+  if(t!=='high-contrast')html.classList.add('theme-'+t);
+});
 qs('feedSelect').addEventListener('change',()=>{lsSet(LS_KEYS.feed,qs('feedSelect').value);updateFeedPill()});
 if(location.search.includes('code='))handleSchwabCallback();
 updateFeedPill();render();renderTransitionLog();updateRegimeBanner();
 setInterval(tickClock,1000);
-// v5: heartbeat every 15s
 setInterval(heartbeat,15000);
 heartbeat();
-// v5: also save full state every 30s even when not polling (idle protection)
 setInterval(()=>{if(state.active.size>0)saveFullState()},30000);
 lastPollAt=Date.now()-3000}
 document.addEventListener('DOMContentLoaded',init);
