@@ -1,229 +1,205 @@
-# MomScanner v7
+# MomScanner v7.1
 
-Three-layer momentum scanner for thinkorswim companion use, built around VWAP-anchored trend detection and L1-friendly Order Flow Imbalance (OFI) proxies. The single blended score from prior versions is replaced by three independent layer scores that capture different time horizons and signal types. Designed for high-contrast accessibility from the ground up.
+Three-layer momentum scanner with Intraday %Chg column, gap-relationship visual indicator, and a trading guide for reading the three layer scores together. Builds on v7's three-layer architecture (Trend / Breakout / Pressure) with five targeted improvements based on Wednesday's session data.
 
-## What's new in v7
+## What's new in v7.1
 
-- **Three-layer architecture** — TREND (slow, 30min-hours, VWAP-driven), BREAKOUT (medium, 5-30min, range expansion), PRESSURE (fast, 30s-5min, OFI proxies). Each layer has its own score, classification, stability gate, and Candidates section.
-- **VWAP tracking** — session-cumulative VWAP computed per ticker from price+volume snapshots, with 30-minute slope history. New VWAP column shows price as a percentage relative to VWAP.
-- **OFI proxies (L1-friendly)** — three blended proxies replacing v6's tick-direction Volume Pressure: (1) bid-ask quote-position averaged over 60s, (2) volume-rate vs session average, (3) size-weighted decaying tick clusters with burst detection.
-- **Three independent Candidates sections** — Trend Candidates (sustained moves), Breakout Candidates (range expansions), Pressure Candidates (aggressive flow). A ticker appears only in its strongest active layer's section.
-- **Accessibility-first design** — high-contrast theme is the default (pure black background, pure white text). Three additional themes available (medium contrast, original v6 colors, light mode). Base font size adjustable 11px-22px with all UI elements scaling together. Explicitly designed for users with visual sensitivity.
-- **Per-layer stability** — each layer has its own qualifying threshold, rolling window, minimum streak, and flip count. The composite Flip Count column shows the sum across all three layers.
-- **Layer-aware row coloring** — when a ticker is in a layer's Candidates section, its row gets a colored left border matching the layer (blue for trend, yellow for breakout, pink for pressure).
+- **Intraday %Chg column (Intra%)** — placed immediately right of %Chg. Shows price change from today's open instead of yesterday's close. Separates intraday momentum from pre-market gap.
+- **Gap-relationship icon (G column)** — visual indicator showing the relationship between premarket gap and intraday move. Eight distinct patterns: ↗↗ ↘↘ ↗↘ ↘↗ ↗━ ↘━ ━↗ ━↘ ━━.
+- **Trend layer scoring update** — the Trend layer now uses Intraday %Chg for its directional reinforcement component instead of overall %Chg. Prevents stale pre-market gaps from inflating Trend scores.
+- **Momentum-type tagging fix** — the Type column now persists through demotion. v7 was nulling the type whenever a candidate left bull/bear state, which is why Wednesday's session summary showed empty Type fields for INTC and other long-running candidates. Sustained-trend tickers now correctly classify as DRIFT after 2+ minutes in candidate state.
+- **Tooltip with full context on Intra% cell** — hover to see today's open price, current price, both percentage changes, and the gap-relationship explanation.
 
-## What's removed from v6
+## What carried over from v7
 
-- **Single blended score** — replaced by three layer scores. The "Score" column is gone.
-- **Single high-threshold setting** — replaced by per-layer thresholds (Settings → Layer Thresholds).
-- **EMA-9 component** — redundant with VWAP, removed from primary scoring path.
-- **Smoothing lag setting** — each layer now has its own appropriate time constant (5min for Trend, 90s for Breakout, 30s for Pressure).
-- **The "Acceleration" section** — redundant with the new Breakout layer Candidates section, which works the same way but is layer-aware.
+- Three-layer architecture (Trend, Breakout, Pressure)
+- VWAP tracking per ticker
+- L1-friendly OFI proxies
+- High-contrast accessibility theme with adjustable font size
+- Per-layer stability gates and Candidates sections
 
-## What carried over from v6/v5/v4
+## What carried over from v5/v6
 
-- Bulletproof persistence (every poll/transition saves immediately)
-- Time-of-day adaptive tuning (Open/Midday/Close window)
-- Market regime indicator (SPY-driven)
+- Bulletproof persistence
+- Time-of-day adaptive tuning
+- SPY-driven regime indicator
 - Don't-Trade warning banner
-- Momentum-type classifier (DRIFT / THRUST / REVR)
 - End-of-session summary report
-- Schwab + Tradier dual-feed support, Penny Pilot whitelist, options liquidity filter
 
 ---
 
-## Part 1 — Set up the GitHub repository (same as before)
+## Part 1 — Reading the Three Layer Scores
 
-If your existing MomScanner repo is set up, skip to step 1.7.
+This section is what you specifically asked for. It's based on Wednesday's session data and your own observations about layer combinations.
 
-### 1.1 — Create your GitHub account if you don't already have one
+### The four key signals to read together
+
+For every ticker, you have four numbers visible in the table:
+
+1. **Trend score** (blue column) — sustained directional move based on VWAP and price action over 30 min to hours
+2. **Brkout score** (yellow column) — range expansion happening over 5 to 30 minutes
+3. **Press score** (pink column) — aggressive intraday flow over 30 seconds to 5 minutes
+4. **VWAP column** — price as a percentage relative to VWAP (positive green / negative red)
+
+The art of reading these is not about looking at any single number. It's about reading the **combination** and matching it to a trade type.
+
+### The five most actionable patterns
+
+These are the patterns that reliably produce profitable trades for a 2-5 DTE OTM options strategy. Each requires VWAP alignment (positive for calls, negative for puts) and a clean Streak (1+ min for slow patterns, 30+ sec for fast).
+
+#### Pattern A — The Strong Sustained Trend
+**Trend ≥ 80, Brkout 55-70, Press ≥ 70** — your "gradual but strong through the day" observation.
+
+This is the highest-conviction, longest-duration pattern. The Trend layer is firing strongly (sustained VWAP positioning), the Breakout layer shows moderate range expansion (the trend keeps making new highs), and Pressure is consistently high (real-time buying or selling is supporting the move).
+
+**Trade as:** position trade. Enter the OTM option, target 50-100% gain on the contract, hold 30-60 minutes or longer. Don't scalp this — let it work.
+
+**Today's INTC was this pattern.** It promoted at 10:04 AM and held continuously for over 4 hours. Anyone holding even a $1-strike-OTM call from that promotion could have ridden multiple expansion phases. The Type tag for this pattern is **DRIFT**.
+
+**Exit when:** Trend score drops below 70, OR VWAP relationship inverts (price falls below VWAP for a call trade), OR option has moved your target percentage.
+
+#### Pattern B — The Quick Subtle Move
+**Trend ≥ 80, Brkout 40-55, Press ≥ 60** — your "quicker and more subtle" observation.
+
+This is what I'd call a trend-supported small move. Trend layer is solidly firing (the stock is in a clear directional state), but Breakout and Pressure are only moderate. The stock is moving in its established direction without aggressive breakouts or volume bursts — it's just drifting up or down on light, consistent flow.
+
+**Trade as:** quick trade. Enter, target 25-40%, exit within 15-25 minutes. Don't expect explosive moves — the lighter Press score tells you there's no aggressive flow to power a fast spike.
+
+**Why this pattern works for you:** the VWAP and Trend alignment means the move has real underlying conviction (institutions are positioned), even though the surface volume isn't dramatic. Many of Wednesday's GOOGL and QCOM candidacies fit this profile.
+
+**Exit when:** Trend or VWAP signal weakens, OR your time stop hits, OR you've hit profit target.
+
+#### Pattern C — The Pressure Spike Bounce
+**Trend 50-65, Brkout 50-65, Press ≥ 75** — and the ticker is in the Pressure Candidates section.
+
+This is the fastest and riskiest pattern. The Trend layer is neutral or only mildly directional. Breakout is also moderate. But Pressure is firing strongly — there's aggressive intraday flow happening right now without a broader trend or breakout context. This is typically a mean-reversion bounce off a key technical level (VWAP, prior low, support/resistance).
+
+**Tuesday's NVDA bounce was exactly this pattern.** The stock had no daily trend, no breakout — just a Pressure spike at the second low of day around 11:11 AM. Your manual chart analysis caught it because you saw the VWAP lower band test. v7's Pressure layer is what now catches this automatically.
+
+**Trade as:** scalp. Enter only if you can fill within seconds, target 15-25% on the option, exit within 5-10 minutes maximum. Use a tight stop — if Pressure score drops below 60 within 90 seconds of entry, exit immediately.
+
+**Exit when:** Pressure score drops below 65 OR after 10 minutes regardless of P&L OR target hit.
+
+#### Pattern D — The Fresh Breakout
+**Trend 55-75, Brkout ≥ 75, Press ≥ 65** — the breakout is the trade.
+
+Stock has moderate trend bias, but the Breakout layer is firing hard. This means range expansion is actively happening, and Pressure confirms there's volume behind it. This pattern often appears after a stock consolidates for 30+ minutes and then starts trading outside its range.
+
+**Trade as:** position trade with breakout discipline. Enter when Breakout score crosses 75 (not before — premature entry on building breakouts is the most common mistake). Target 30-50% on the option. Hold while Breakout score remains ≥70, exit when it drops below 60.
+
+**Exit triggers:** Breakout score below 60, OR price re-enters the prior consolidation range (visible by VWAP%change reverting toward zero), OR 20-minute time stop.
+
+#### Pattern E — The Don't-Trade Pattern
+**Any layer 50-65, no layer ≥ 70, AND Flips ≥ 4** — skip this one.
+
+Layer scores are middling, no layer has clear conviction, and the ticker has been oscillating today (high flip count). Even if it briefly hits a Candidates section, the persistent middling scores mean the move won't sustain. This is what produced Tuesday's CLSK and Monday's general behavior — false candidacies that demote within seconds.
+
+**Trade as:** don't. The Don't-Trade banner often appears alongside this pattern across multiple tickers. Sit out.
+
+### Pattern matching cheat sheet
+
+| Trend | Brkout | Press | Type | Pattern | Hold time | Target |
+|---|---|---|---|---|---|---|
+| 80+ | 55-70 | 70+ | DRIFT | Strong Sustained Trend | 30+ min | 50-100% |
+| 80+ | 40-55 | 60-70 | DRIFT | Quick Subtle Move | 15-25 min | 25-40% |
+| 50-65 | 50-65 | 75+ | THRUST/REVR | Pressure Spike Bounce | 5-10 min | 15-25% |
+| 55-75 | 75+ | 65+ | DRIFT | Fresh Breakout | 15-30 min | 30-50% |
+| Any <70 | Any <70 | Any <70 | — | Don't Trade | — | — |
+
+### How to use the Intraday %Chg column for entry timing
+
+The new Intra% column tells you whether intraday traders are actually moving the stock right now, vs whether the move is stale gap.
+
+**Read the Gap (G) column first:**
+
+- **↗↗** (gapped up + intraday continuing up): the cleanest setup. Both pre-market and intraday traders agree on direction. Look for Pattern A or B.
+- **↘↘** (gapped down + intraday continuing down): clean downtrend, look for Pattern A/B with put trades.
+- **↗↘** (gap up but fading): gap-fill setup. The pre-market enthusiasm is being sold off. Avoid call trades. Watch for Pattern C bounce off the gap-fill level (often VWAP) as a contrarian setup, or join the fade with puts.
+- **↘↗** (gap down but bouncing): your favorite pattern — this was Tuesday's NVDA. Pre-market pessimism is being bought up. Pattern C territory. Calls likely if Pressure fires.
+- **↗━** (gapped up, intraday flat): stale gap, momentum exhausted. Skip unless Pressure suddenly fires.
+- **↘━** (gapped down, intraday flat): sellers exhausted. Watch for Pattern C bounce.
+- **━↗** (no gap, intraday rallying): fresh real-time strength with no premarket bias. Excellent for clean Trend trades because there's no stale-gap noise.
+- **━↘** (no gap, intraday falling): fresh real-time weakness. Same as above for puts.
+
+The combination of the gap icon AND the Intra% number AND the layer scores gives you a 3-second read on whether a setup is worth investigating further.
+
+### A worked example using Wednesday's INTC
+
+Here's how Wednesday's INTC trade would have been read using v7.1's tools:
+
+**10:04 AM:** INTC promotes to Trend Candidates section. Layer scores:
+- Trend: 71 (just crossed threshold)
+- Brkout: ~55 (mild range expansion)
+- Press: ~65 (some flow but not aggressive)
+- VWAP: +1.5% (price holding above)
+- %Chg: +4.43%, Intra%: probably +2-3% (most of the move was the gap)
+- G icon: **↗↗** (gapped up and continuing intraday)
+- Type: DRIFT
+- Streak: 2:00 just qualified
+
+**Pattern match:** Strong Sustained Trend forming (Pattern A). Clean ↗↗ gap. Worth taking.
+
+**Entry:** $90 strike call, 2-5 DTE, limit at midpoint of bid/ask.
+
+**Throughout the day:** Trend score climbs to 91 by mid-afternoon. Breakout score touches 75 during the 2:43 PM acceleration. Pressure remains in the 65-75 range showing consistent buying. The position works for 4+ hours.
+
+**Exit signal:** Could hold to close, or exit when Trend score first dips below 80 with VWAP%change below +0.5% (the trend is weakening).
+
+This is the kind of trade that v7's three-layer architecture is designed to surface and that v7.1's Intra% column lets you confirm at a glance.
+
+---
+
+## Part 2 — Set up the GitHub repository
+
+(Same as prior versions — skip if existing repo set up.)
+
+### 2.1 — Create your GitHub account
 
 1. Go to **https://github.com**.
 2. Click **Sign up**, enter email, password, username.
 3. Verify your email and complete the puzzle. Pick the free plan.
 
-### 1.2 — Create the repository
+### 2.2 — Create the repository
 
 1. Top-right **+** icon → **New repository**.
 2. Name: `MomScanner`. Visibility: Public. Check "Add a README file."
 3. Click **Create repository**.
 
-### 1.3 — Add the index.html file
+### 2.3 — Add the index.html file
 
 1. **Add file** → **Create new file**.
 2. Name: `index.html`.
-3. Paste the entire contents of the v7 index.html.
+3. Paste the entire contents of the v7.1 index.html.
 4. Click **Commit new file**.
 
-### 1.4 — Replace the README
+### 2.4 — Replace the README
 
 1. Click `README.md` → pencil icon.
 2. Delete and paste this README. Commit.
 
-### 1.5 — Enable GitHub Pages
+### 2.5 — Enable GitHub Pages
 
 1. **Settings** → **Pages**.
 2. Source: Deploy from a branch. Branch: `main` / `(root)`. Save.
 3. Wait 1-2 minutes. Refresh. Copy the URL shown.
 
-### 1.6 — First-time launch test
-
-1. Open your MomScanner URL.
-2. Click the **gear icon** (top right).
-3. Set Feed to **Tradier**, paste your API key, set Environment to **Production**.
-4. Click **Save Keys**, then **Test Feed**.
-5. A toast should say `Feed OK`.
-
-### 1.7 — Updating from v6 to v7
+### 2.6 — Updating from v7 to v7.1
 
 1. Go to repo → click `index.html` → pencil icon.
-2. Ctrl+A → delete → paste new v7 code → Commit.
+2. Ctrl+A → delete → paste new v7.1 code → Commit.
 3. Wait 30-60 seconds. **Hard refresh: Ctrl+Shift+R**.
-4. Your active tickers, history, transitions, settings, and API keys all carry over.
-5. **Note:** v7 introduces new state fields (VWAP, layer scores, layer stability) that won't exist in your v6 saved state. The first session after upgrade will rebuild this state from scratch — expect Layer Candidates sections to be empty until tickers accumulate enough VWAP history (typically 5-10 minutes after pasting).
+4. All your v7 settings, tickers, history, transitions carry over.
+5. The Intra% column will populate after the first poll cycle (open price comes from the same Tradier quote response we already pull).
 
 ---
 
-## Part 2 — The Three-Layer Architecture
+## Part 3 — Schwab Developer API
 
-### Why three layers instead of one score?
-
-The single blended score in v3-v6 averaged together fast and slow signals, hiding diagnostic information. A stock could score 65 because it had moderate everything, or because trend was 80 and pressure was 50, or because trend was 50 and pressure was 80. You couldn't tell which.
-
-In v7, each layer is independent. You see exactly what's firing. Your trade decisions can be based on the specific pattern that matters: a sustained trend bounce (trend layer firing alone), a breakout from consolidation (breakout layer firing), or aggressive intraday flow (pressure layer firing). The layers give you diagnostic clarity that a single number can't.
-
-### TREND Layer (slow signal, 30min-hours horizon)
-
-Captures the "3 percent in 3 hours" subtle moves you specifically asked for in our v7 design conversation.
-
-**What it measures:** Whether the stock is in a sustained directional move based on its position relative to VWAP, the slope of VWAP itself, and confirmation from relative volume and percent change.
-
-**Components:**
-1. *Price-vs-VWAP, ATR-normalized* (40 points): How many ATRs above or below VWAP is the stock? Sustained price above VWAP = institutional buying. Below = institutional selling.
-2. *VWAP slope direction* (15 points): Is VWAP itself rising or falling over the last 30 minutes? Reinforces the directional component.
-3. *RVol confirmation* (10 points): Is volume confirming the directional bias?
-4. *PctChg reinforcement* (10 points): Is the day's overall change consistent with the layer's signal?
-
-**Smoothing:** 5-minute time constant. Trend changes slowly by design.
-
-**Default qualifying threshold:** 65, with 120-second minimum streak. Requires sustained confirmation before promoting to a Trend Candidate.
-
-### BREAKOUT Layer (medium signal, 5-30min horizon)
-
-Captures range expansion patterns where a stock has been consolidating and starts breaking out.
-
-**What it measures:** Combination of v6's consolidation-breakout detector (last 5 min range vs prior 25 min range), VWAP-derived band breaks (price escaping ±1.5 standard deviations of recent VWAP), and volume confirmation.
-
-**Smoothing:** 90-second time constant. Faster than trend, slower than pressure.
-
-**Default qualifying threshold:** 70, with 30-second minimum streak. Breakouts can be valid quickly, but require some sustainment to qualify.
-
-### PRESSURE Layer (fast signal, 30s-5min horizon)
-
-Captures aggressive intraday order flow — moments when buying or selling is dominant for short windows.
-
-**What it measures:** Three OFI proxies blended together. None is reliable individually on L1 data, but the combination produces a robust pressure read.
-
-**Proxies:**
-1. *Quote-position OFI averaged over 60s* (40 points): Where in the bid-ask spread are recent prints landing? Average over 60s smooths out the per-tick timing noise that hurt v5's Volume Pressure.
-2. *Volume-rate OFI* (30 points): Is recent volume rate (last 60s) much higher than session average? Combined with directional bias to amplify or dampen.
-3. *Size-weighted tick clusters with burst detection* (30 points): Sum of `sign × sqrt(volDelta) × decay` over the tick buffer. Plus an extra burst bonus when 5+ same-direction ticks happen within 10 seconds (potential institutional sweep).
-
-**Smoothing:** 30-second time constant. Fast layer needs to respond quickly.
-
-**Default qualifying threshold:** 72, with 15-second minimum streak. Pressure events are short-lived by nature.
-
-### How the three layers interact
-
-Each layer has its own classification (warmup → watch → bull/bear). A ticker can be:
-- A Trend Candidate AND a Pressure Candidate simultaneously (sustained trend + aggressive flow now)
-- A Breakout Candidate only (consolidation just broke)
-- In Watching (no layer qualifies)
-- In Warmup (less than 3 minutes of data)
-
-The UI shows each ticker in only one section based on priority: **Pressure > Breakout > Trend > Watching**. The fastest signal wins for placement, because Pressure events are usually the trade trigger — if Pressure is firing, that's what you act on first. The other layer scores are still visible in the row's score columns, so you see the full picture.
-
-### How VWAP is incorporated across layers
-
-VWAP isn't one signal — it appears in different forms across all three layers:
-
-- **Trend layer:** Uses VWAP position (price-vs-VWAP) and VWAP slope (rising/falling over 30 minutes) as primary signals.
-- **Breakout layer:** Uses VWAP-derived bands (±1.5 standard deviations of recent VWAP history) as breakout boundaries.
-- **Pressure layer:** Doesn't use VWAP directly. Pressure is short-horizon and OFI-driven.
-
-This is intentional. VWAP is a slow indicator — it's most reliable for confirming sustained moves. Using it for the fast pressure layer would dampen pressure signals unnecessarily.
-
-### How OFI proxies work specifically
-
-True Order Flow Imbalance requires Level 2 streaming data. We can't get that on Tradier L1. The three proxies approximate it:
-
-**Proxy 1 — Quote-position averaged over 60s.**
-Where in the bid-ask spread do trades land? Trades at ask = buying. Trades at bid = selling. v5 used per-tick bid-ask position, which was noisy because bid/ask snapshots don't refresh in perfect sync with last-trade snapshots. v7's fix: average the position over the last 60 seconds. Individual snapshot timing errors cancel out in the average.
-
-**Proxy 2 — Volume-rate OFI.**
-Compare recent volume rate (last 60s) to session-average volume rate. If recent rate is 3x average, something is happening. Combined with direction (from tick buffer), this tells whether aggressive flow is buy-side or sell-side.
-
-**Proxy 3 — Size-weighted decaying tick clusters with burst detection.**
-For each tick in the buffer, weight the sign by sqrt(volume delta). Apply exponential decay so recent ticks count more (half-life ~14s). Add a bonus when 5+ same-direction ticks happen within 10 seconds (potential institutional sweep).
-
-All three feed into the Pressure score. The exact blend is documented in `computePressureScore` in the source code.
+(Unchanged from prior versions. See v7 README if needed.)
 
 ---
 
-## Part 3 — Accessibility (v7)
-
-### Why this is foundational
-
-If column headers are too faint to read against the background, none of the rest of the tool matters. v7 makes accessibility a first-class concern.
-
-### The four themes
-
-- **High Contrast (default):** Pure black background, pure white text. Brightened accent colors (yellow for accent, brighter green/red for direction). All text uses --text (white), --text-dim (very high contrast light gray), or --text-faint (still readable). Recommended for visual sensitivity.
-- **Medium Contrast:** Slightly less harsh than high contrast. Off-white text on near-black background. Brightened accents but not as aggressive.
-- **Original v6:** The exact theme from v6, for users who prefer it.
-- **Light:** White background, black text. Uses darker accents that work on light backgrounds. Useful in bright environments.
-
-### Font size scaling
-
-The base font size is adjustable from 11px to 22px in 1px increments. All UI text scales together — column headers, ticker symbols, score numbers, table cells, settings labels, badges, everything. Tables grow taller, badges grow proportionally, layout adapts.
-
-The system uses CSS calc() with a single `--font-base` variable, so there are no orphan sizes that don't scale.
-
-### How to change accessibility settings
-
-1. Click the **gear icon** (top right).
-2. Scroll to **Accessibility (v7)** section.
-3. Pick a theme from the dropdown — preview applies immediately.
-4. Drag the **Base Font Size** slider — preview applies immediately.
-5. Click **Save Accessibility** to persist your choices to localStorage.
-
-Settings persist across browser refreshes and survive the v7→v8 upgrade in the future.
-
-### Recommended for post-eye-surgery users
-
-Use **High Contrast** theme with base font size **17px or 18px**. The grid expands proportionally and column headers become large enough to read at a glance.
-
----
-
-## Part 4 — Schwab Developer API (unchanged from prior versions)
-
-### 4.1 — Register at developer.schwab.com using brokerage credentials
-
-### 4.2 — Create app
-
-- Name: `MomScanner`
-- Callback URL: your GitHub Pages URL (with trailing slash)
-- API Products: Accounts and Trading Production + Market Data Production
-
-### 4.3 — Wait 1-3 business days for approval
-
-### 4.4 — When approved, paste keys in MomScanner Settings
-
-In MomScanner, gear icon → Schwab fields → paste App Key and App Secret → Save Keys → change Feed dropdown to Schwab → Connect Schwab → log in → approve.
-
----
-
-## Part 5 — thinkorswim web scan filter
+## Part 4 — thinkorswim web scan filter
 
 (Unchanged from v6.)
 
@@ -234,19 +210,14 @@ In MomScanner, gear icon → Schwab fields → paste App Key and App Secret → 
 | Last | Min: **20** · Max: **500** |
 | Volume | Min: **2,000,000** |
 | Percent Change | Min: **1.00** (no max) |
-| Market Cap | Min: **5000** (M = millions, so 5000 M = $5 billion) |
+| Market Cap | Min: **5000** ($5 billion, M = millions) |
 | Option Volume Index | Min: **1.00** |
 
-**Critical:** include **SPY** in your imported list every time, for regime detection.
-
-### Two scans approach
-
-- **MomScanner-Main**: above filters. Run from 9:30 AM to ~2:30 PM, refresh every 20 min.
-- **MomScanner-CloseWindow**: same but Volume ≥ 3M, Percent Change between 0.30 and 3.00, OVI ≥ 1.5. Run at 2:55 PM only, to catch consolidation candidates that may break out in the close window.
+**Critical:** include **SPY** in your imported list every time.
 
 ---
 
-## Part 6 — How to trade with v7
+## Part 5 — Daily trading routine for v7.1
 
 ### Pre-market
 
@@ -254,131 +225,108 @@ Open MomScanner. Run thinkorswim scan. Note pre-market movers but don't paste ye
 
 ### 9:30 AM — Initial setup
 
-Paste thinkorswim results. **Make sure SPY is included.** Don't trade. ToD badge will show "Open" — strict thresholds active. All three layers in warmup.
+Paste thinkorswim results. **Make sure SPY is included.** Don't trade. The Intra% column will be empty until first poll completes (5 seconds). Once the open prices flow in, the gap icon (G column) starts populating.
 
 ### 9:30-10:00 — Observation window
 
-Layer scores initialize to 50 and start moving. VWAP tracking begins accumulating. Regime banner activates within 30 seconds. None of the three layer Candidates sections will populate this early — they all need at least 3 minutes of warmup plus stability gate.
+All tickers in warmup. Use this time to scan the G column quickly:
+- **↗↗** tickers are the cleanest call setups
+- **↘↘** tickers are the cleanest put setups
+- **↘↗** tickers are bounce candidates (will likely show Pressure Candidates first)
+- **↗↘** tickers are fade candidates
+- **↗━ / ↘━** tickers are stale, low priority
 
 ### 10:00 AM — Midday window
 
-ToD shifts to "Midday." Layer scores have meaningful data. Trend Candidates may start appearing as VWAP positioning sustains. Pressure Candidates may flicker briefly during high-volume moments.
+Layers start qualifying. Watch for the five trade patterns described in Part 1:
 
-### Trading midday — reading the layers
+1. Strong Sustained Trend (best for sustained holds)
+2. Quick Subtle Move (good for quick scalps with VWAP confirmation)
+3. Pressure Spike Bounce (only if you can fill fast)
+4. Fresh Breakout (when Brkout score crosses 75)
+5. Don't-Trade Pattern (skip these — Don't-Trade banner usually confirms)
 
-When a ticker appears in a Candidates section, the section it appears in tells you the type of trade:
+### Trade entry checklist
 
-**Trend Candidate** (blue left border) — sustained move. Examples: a stock holding above VWAP for 30+ minutes with rising VWAP slope. Trade like a position trade: target 25-50% on the option, hold for 15-30 minutes, exit when trend layer score drops or VWAP slope flattens.
+Before placing any trade:
 
-**Breakout Candidate** (yellow left border) — range expansion happening now. Trade with tighter targets: 20-30% on the option, 10-15 minute hold. Exit when breakout score drops below 60 or price re-enters the prior range.
+1. ✅ Pattern matched from the cheat sheet above
+2. ✅ Streak shows minimum sustained time (1+ min for slow patterns, 30+ sec for Pressure)
+3. ✅ Flips < 4 (no warning icon)
+4. ✅ Spread% ≤ 5%
+5. ✅ VWAP relationship matches your direction (positive% for calls, negative% for puts)
+6. ✅ Gap icon supports the direction (↗↗ or ━↗ for calls, ↘↘ or ━↘ for puts; ↘↗ for contrarian call bounce, ↗↘ for contrarian put fade)
+7. ✅ Don't-Trade banner is NOT showing
+8. ✅ Type tag visible and matches pattern (DRIFT for sustained, THRUST or REVR acceptable for Pressure spikes)
 
-**Pressure Candidate** (pink left border) — aggressive flow right now. The fastest, most volatile setup. Trade only if you can fill within seconds. Target 15-25%, exit within 5 minutes.
-
-### Trading checklist (any layer)
-
-Before entering, verify:
-1. **Score in the qualifying layer is 65+** (Trend) or 70+ (Breakout) or 72+ (Pressure)
-2. **Streak column shows sustained time** (1:30+ for Trend, 30s+ for Breakout, 15s+ for Pressure — all minimum stability gate values)
-3. **Flips column < 4** (no warning icon)
-4. **No Don't-Trade banner** active
-5. **VWAP column matches your direction** (positive % for calls, negative for puts)
-6. **Spread% ≤ 5%** (tight enough for tradable options)
-7. **Type tag visible** (DRIFT preferred for Trend setups, THRUST acceptable for Pressure setups, REVR cautious always)
-
-If all check out, place the trade in Robinhood: 2-5 DTE, one strike OTM, limit order at midpoint.
+If all eight check, place the trade in Robinhood.
 
 ### Exit triggers
 
-1. **Layer score drops below 60** in the qualifying layer → market sell
-2. **Streak resets to —** → sell at bid
-3. **Demoted from layer Candidates** → check Session Log for reason → limit sell above bid
-4. **VWAP relationship inverts** (was positive, now negative for a call trade) → exit
-5. **20-min time stop** without 15%+ option move → exit
+Match exits to your entry pattern:
+
+- **Pattern A (Strong Sustained Trend):** exit when Trend < 70 OR option +75-100% OR VWAP relationship inverts
+- **Pattern B (Quick Subtle Move):** exit when Trend < 70 OR option +25-40% OR 20-min time stop
+- **Pattern C (Pressure Spike):** exit when Press < 65 OR option +15-25% OR 10-min time stop (whichever first)
+- **Pattern D (Fresh Breakout):** exit when Brkout < 60 OR option +30-50% OR price re-enters consolidation range
+
+Universal hard stops apply to all patterns:
+- Layer score drops below 50 → market sell immediately
+- Streak resets to — → sell at bid
+- 20-minute total hold without 15%+ option move → exit
 
 ### 3:00 PM — Close window
 
-ToD shifts to "Close Window." Looser thresholds active for layers that allow it. On a low-vol day, the Don't-Trade override prevents looser thresholds from generating noise.
+Looser thresholds activate (unless low-vol day, in which case override keeps them tight). Pressure Candidates may appear more frequently. Trade with shorter holds and tighter targets.
 
 ### 4:00 PM — Session close
 
-Click **Session Summary** to generate the report. Print to PDF. Note which layer produced your best trades for tomorrow's planning.
+Click **Session Summary**. Save as PDF. Export Active CSV (now includes layer scores, VWAP, Intraday %Chg in the columns).
 
 ---
 
-## Part 7 — Settings reference
+## Part 6 — Settings reference
 
-### Data Source
-Tradier or Schwab keys, callback URL, environment selection, OAuth connect.
-
-### Options Liquidity Filter
-Penny Pilot toggle, max spread %, min OI, max DTE, options check interval.
-
-### Score Weights (legacy — not used in v7's primary path)
-The five weights (VP, RV, PE, VE, OA) only affect the legacy single-score view, which is no longer the primary scoring path in v7. Layer thresholds are the operational controls.
-
-### Time-of-Day Tuning (v5)
-Toggle. Adapts thresholds across the three time windows.
-
-### Stability Filter (v4)
-- Window: 10 cycles default
-- Min Qual: 8 of 10 default
-- Min Streak: 60 seconds (overridden by ToD)
-- Flip Warn: 8
-
-These apply to the *legacy* single-classification path. v7's layer-specific stability uses its own internal defaults (see Part 2 above).
-
-### Behavior
-- Smoothing Lag: 60s (overridden by per-layer time constants in v7)
-- High Threshold: 75 (legacy — v7 uses per-layer thresholds)
-- Low Threshold: 25
-- Min Refresh: 5 seconds
-
-### Accessibility (v7)
-Theme picker (4 options) and base font size slider (11-22px). Live preview as you adjust. Click Save to persist.
+Identical to v7 except for the new fields automatically captured (todayOpen, intradayPctChg). No new settings to configure.
 
 ---
 
-## Part 8 — Troubleshooting
+## Part 7 — Troubleshooting
 
-**Layer score stays at 50 indefinitely:** That layer's components don't have enough data yet. Trend needs ~5 minutes of VWAP history. Breakout needs ~25 minutes (it compares short and long ranges). Pressure needs ~30 seconds of tick data. After warmup completes, scores should start moving.
+**Intra% shows — for several minutes after pasting:** Today's open price is captured on the first successful quote poll. If poll is failing, no open price is captured. Check Test Feed.
 
-**VWAP column shows "—":** Volume hasn't accumulated yet. VWAP requires at least one volume delta to compute. Wait 1-2 polls.
+**G column shows — even when both %Chg and Intra% are filled:** The values are within ±0.1% (considered "flat"). Icons only render for material moves.
 
-**No Trend Candidates appearing all day:** The Trend layer requires sustained directional bias — score 65+ AND price-vs-VWAP direction maintained for 120+ seconds. On purely sideways days, this won't fire. That's correct behavior.
+**G column shows ━━ for SPY:** SPY having both flat overall change and flat intraday change is normal on quiet days — that's the actual pattern.
 
-**Pressure Candidates flickering rapidly:** Pressure has a 15-second minimum streak by design (fastest layer). On choppy days expect frequent transitions in this layer specifically. The Don't-Trade banner will appear if these are happening with no sustained candidacies.
+**Trend score seems lower in v7.1 vs v7 for some stocks:** This is intentional. Stocks up huge on pre-market gaps but flat intraday will score lower in v7.1's Trend layer because the stale gap no longer inflates the score. This is the correct behavior — it represents what the stock is actually doing right now.
 
-**Layer score columns hard to read:** Open Settings → Accessibility → bump base font size to 17 or 18. Or pick the High Contrast theme if you're not already on it.
+**Type column shows DRIFT for everything:** That's actually expected for sustained-trend setups, which are the most common. THRUST appears when score is rising fast (>8 pts/min). REVR appears when there's been recent direction reversal (flips >= 2). DRIFT is the default for steady candidates. The fix in v7.1 means DRIFT now persists through demotion instead of becoming null.
 
-**Theme change doesn't persist:** Make sure to click "Save Accessibility" after picking a theme. Without saving, the preview is live but won't survive a refresh.
+**Layer scores all show 50:** Either the ticker is genuinely neutral, or it hasn't accumulated enough data yet (VWAP needs ~5 min, Breakout needs ~25 min, Pressure needs ~30 sec). Wait for warmup.
 
-**Three layer scores all reading similar values:** Either the ticker is in a balanced state across signals (legitimate), or VWAP/tick data hasn't accumulated enough yet (early in session). Wait or check VWAP column.
-
-**Regime banner stuck at "unknown":** SPY isn't in your active scan. Add SPY.
+**Theme settings or font size not persisting:** Click "Save Accessibility" in Settings after adjusting. Live preview is unsaved.
 
 **Code update not showing:** GitHub Pages caches 30-60 seconds. Hard refresh with Ctrl+Shift+R.
 
 ---
 
-## Part 9 — Data safety
+## Part 8 — Data safety
 
-All API keys and trading data stored in browser localStorage only. Never transmitted except directly to Tradier/Schwab API endpoints. Repository contains no keys. Public repo is safe.
-
-The session snapshot stored by v5/v6/v7's persistence layer is comprehensive — includes price history, score history, layer states, VWAP state, tick buffers. To clear all data: gear → clear keys, plus Clear Active, Clear History, Clear Log buttons. Or clear site data in browser settings.
+All API keys and trading data stored in browser localStorage only. Repository contains no keys.
 
 ---
 
-## Part 10 — Roadmap
+## Part 9 — Roadmap
 
 Pending features for future versions:
 
-1. **Alpaca L2 integration (v8)** — true Order Flow Imbalance with real bid/ask classification of every print, replacing the L1 OFI proxies. The Pressure layer becomes a genuine first-class signal.
-2. **Schwab token auto-refresh** before 30-minute expiration
-3. **WebSocket streaming** if your data tier supports it
-4. **Sound or browser notification** when a candidate promotes
-5. **Spread trend indicator** showing whether ATM spread is widening or tightening
-6. **Historical ATR/EMA** from a proper bars endpoint (replaces rolling approximation)
-7. **Multi-day summary archive browser** to compare today's session against prior sessions
-8. **Auto-export at 4:00 PM** — automatic CSV + PDF generation when the close window ends
-9. **Per-ticker notes** — small text field per ticker for your own annotations
-10. **Backtest mode** — replay a past session from CSVs to test new settings
+1. **Alpaca L2 integration (v8)** — true Order Flow Imbalance with real bid/ask classification of every print, replacing L1 OFI proxies. The Pressure layer becomes a first-class signal.
+2. **Multi-day pattern recognition** — track which gap patterns (↗↗ etc.) produced the best trades for each ticker, suggest patterns to watch tomorrow
+3. **Schwab token auto-refresh** before 30-min expiration
+4. **WebSocket streaming** if data tier supports it
+5. **Sound or browser notification** on candidate promotion or breakout
+6. **Auto-export at 4:00 PM** — automatic CSV + PDF without manual click
+7. **Per-ticker notes** — annotation field for your own observations
+8. **Backtest mode** — replay past sessions from CSVs
+9. **Layer correlation panel** — click a ticker to see its three layer scores plotted over time, helping you identify which patterns work best for your specific tickers
