@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MomScanner v7</title>
+<title>MomScanner v7.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -132,7 +132,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Grid rows */
 .tbl-scroll{overflow-x:auto;max-height:65vh;overflow-y:auto}
-.g-row{display:grid;grid-template-columns:24px 60px minmax(50px,0.7fr) 50px 50px 44px 56px 56px 56px 64px 26px 54px 54px 38px 40px;gap:4px;padding:8px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums;font-size:var(--font-base)}
+.g-row{display:grid;grid-template-columns:24px 60px minmax(46px,0.6fr) 46px 50px 22px 44px 44px 54px 54px 54px 60px 22px 50px 50px 36px 38px;gap:3px;padding:8px 14px;align-items:center;border-bottom:1px solid var(--border-soft);transition:background .08s;font-variant-numeric:tabular-nums;font-size:var(--font-base)}
 .g-row:hover{background:var(--bg-panel-2)}
 .g-hdr{font-size:calc(var(--font-base) - 2px);color:var(--text);font-weight:600;letter-spacing:.7px;text-transform:uppercase;border-bottom:2px solid var(--border);padding:8px 14px;position:sticky;top:0;background:var(--bg-panel-2);z-index:2}
 .g-hdr:hover{background:var(--bg-panel-2)}
@@ -187,6 +187,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .score-bar{position:relative;width:38px;height:15px;background:var(--bg-base);border:1px solid var(--border-soft);border-radius:2px;overflow:hidden;display:inline-block}
 .score-fill{position:absolute;top:0;left:0;bottom:0;transition:width .6s cubic-bezier(.4,0,.2,1),background .4s}
 .score-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:var(--text);text-shadow:0 1px 2px rgba(0,0,0,.8)}
+
+/* v7.1: Gap-relationship icons */
+.gap-icon{display:inline-block;font-size:calc(var(--font-base) - 1px);font-weight:700;letter-spacing:-1px}
+.gap-strong-up{color:var(--up);text-shadow:0 0 4px var(--up-soft)}
+.gap-strong-dn{color:var(--down);text-shadow:0 0 4px var(--down-soft)}
+.gap-fade{color:var(--accent)}
+.gap-bounce{color:var(--blue)}
+.gap-stale{color:var(--text-faint)}
+.gap-flat{color:var(--text-faint)}
 
 /* v7: Layer score cells (Trend/Breakout/Pressure) */
 .layer-score{position:relative;width:50px;height:18px;background:var(--bg-base);border:1px solid var(--border);border-radius:2px;overflow:hidden;display:inline-block}
@@ -312,7 +321,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="hdr-left">
     <div class="hdr-mark"></div>
     <span class="hdr-name">MomScanner</span>
-    <span class="hdr-sub">MOMENTUM TERMINAL v7</span>
+    <span class="hdr-sub">MOMENTUM TERMINAL v7.1</span>
   </div>
   <div class="hdr-right">
     <div class="pill"><span id="feedDot" class="dot-warn"></span> <strong id="feedLabel">—</strong></div>
@@ -338,7 +347,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="info-box" id="infoBox">
   <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Three-layer scoring &middot; Trading signals</div>
   <div class="info-body">
-    <p><strong>v7 Three-Layer Architecture:</strong> The single blended score from v6 is replaced by three independent layer scores. Each layer captures a different time horizon and signal type. A ticker is shown in the Candidates section corresponding to its strongest active layer.</p>
+    <p><strong>v7.1 Intraday %Chg column (Intra%):</strong> Shows price change vs today's open, separating intraday momentum from pre-market gap. The %Chg column (vs yesterday's close) bakes in both — Intra% isolates the intraday-only move that your strategy is designed to trade. Tooltip on hover shows both values plus today's open price.</p>
+    <p style="margin-top:6px"><strong>v7.1 Gap-relationship icon (G column):</strong> <span class="gap-icon gap-strong-up">↗↗</span> gapped up and continuing up · <span class="gap-icon gap-strong-dn">↘↘</span> gapped down and continuing down · <span class="gap-icon gap-fade">↗↘</span> gap up but fading intraday · <span class="gap-icon gap-bounce">↘↗</span> gap down but bouncing intraday · <span class="gap-icon gap-stale">↗━</span> gap up but flat intraday (stale gap) · <span class="gap-icon gap-stale">↘━</span> gap down but flat intraday. The 4 most informative patterns: <span class="gap-icon gap-bounce">↘↗</span> is your "second low bounce" setup like NVDA Tuesday; <span class="gap-icon gap-strong-up">━↗</span> means fresh intraday strength with no premarket bias.</p>
+    <p style="margin-top:6px"><strong>v7.1 Trend layer scoring update:</strong> The Trend layer now uses Intraday %Chg (price vs today's open) instead of overall %Chg for its directional reinforcement component. This prevents stale pre-market gaps from inflating the Trend score for stocks that aren't actually moving intraday.</p>
+    <p style="margin-top:6px"><strong>v7.1 Momentum-type fix:</strong> The Type column now persists the last classification when a ticker leaves candidate state. In v7, Type was nulled when the candidacy ended, which is why the session summary showed empty Type fields for all tickers including INTC. Sustained-trend tickers (steady score, low velocity, no flips) now correctly classify as DRIFT after 2+ minutes in candidate state.</p>
+    <p style="margin-top:10px"><strong>v7 Three-Layer Architecture:</strong> The single blended score from v6 is replaced by three independent layer scores. Each layer captures a different time horizon and signal type. A ticker is shown in the Candidates section corresponding to its strongest active layer.</p>
     <p style="margin-top:8px"><strong style="color:var(--layer-trend)">TREND Layer (slow, 30min-hours)</strong> — Built from VWAP. Captures the "3% in 3 hours" subtle moves. Three sub-components: price-vs-VWAP position (ATR-normalized), VWAP slope direction, and RVol+pctChg confirmation. Smoothing time constant 5 min. Default qualifying threshold 65 with 120s minimum streak. This is the slow, sustained-trend signal.</p>
     <p style="margin-top:6px"><strong style="color:var(--layer-breakout)">BREAKOUT Layer (medium, 5-30min)</strong> — Range expansion + VWAP band breaks. Built on v6's consolidation breakout detector with VWAP-derived bands and volume confirmation. Smoothing time constant 90s. Default threshold 70 with 30s minimum streak. Fires when consolidation gives way to expansion.</p>
     <p style="margin-top:6px"><strong style="color:var(--layer-pressure)">PRESSURE Layer (fast, 30s-5min)</strong> — Three OFI proxies blended: (1) average bid-ask position of recent prints over 60s, (2) volume rate vs session average, (3) size-weighted decaying tick clusters with burst detection. Smoothing 30s. Default threshold 72 with 15s minimum streak. Captures aggressive intraday flow.</p>
@@ -373,7 +386,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="tbl-scroll" id="tblScroll">
     <!-- Header row -->
     <div class="g-row g-hdr">
-      <div></div><div>Ticker</div><div class="r">Last</div><div class="r">%Chg</div>
+      <div></div><div>Ticker</div><div class="r">Last</div><div class="r" title="% change vs yesterday's close (includes pre-market gap)">%Chg</div><div class="r" title="% change vs today's open (intraday only)">Intra%</div><div class="c" title="Gap relationship: ↗↗ both up, ↘↘ both down, ↗↘ gap up but fading, ↘↗ gap down but bouncing">G</div>
       <div class="r">Sprd%</div><div class="r">RVol</div>
       <div class="c">Trend</div><div class="c">Brkout</div><div class="c">Press</div>
       <div class="r">VWAP</div><div class="c">Dir</div><div class="r">Streak</div><div class="c">Type</div><div class="r">Flips</div><div class="r">Min</div>
@@ -733,6 +746,7 @@ function updateFeedPill(){const f=qs('feedSelect').value,dot=qs('feedDot'),lbl=q
 
 // ---- TICKER MGMT ----
 function makeTicker(t,now){return{ticker:t,firstSeen:now,lastSeen:null,last:null,prevClose:null,pctChg:null,pmPrice:null,ahPrice:null,volume:null,avgVol20:null,relVol:null,bid:null,ask:null,atr:null,ema9:null,optOI:null,optSpread:null,optSpreadPct:null,optLastChecked:0,optBid:null,optAsk:null,optMid:null,optDTE:null,rawScore:50,smoothScore:50,firstSeenScore:null,direction30s:0,arrow:'flat',components:{VP:50,RV:50,PE:50,VE:50,OA:50},stabilityWindow:[],currentState:'warmup',streakStart:null,streakState:null,flipCount:0,lastTransitionAt:null,priceRangeShort:[],priceRangeLong:[],breakoutScore:0,breakoutActive:false,scoreVelocity:0,momentumType:null,peakScore:50,peakScoreAt:null,accelCandidate:false,tickBuffer:[],_lastTickPrice:null,_lastTickVolume:null,
+todayOpen:null,_todayOpenDate:null,intradayPctChg:null,
 trendScore:50,trendScoreRaw:50,firstSeenTrend:null,peakTrend:50,peakTrendAt:null,
 breakoutScoreSm:50,breakoutScoreRaw:50,firstSeenBreakout:null,peakBreakout:50,peakBreakoutAt:null,breakoutDir:'flat',
 pressureScore:50,pressureScoreRaw:50,firstSeenPressure:null,peakPressure:50,peakPressureAt:null,
@@ -920,10 +934,13 @@ function computeTrendScore(d){
     }
   }
 
-  // Component D (10 pts): Pct change of day
-  // Reinforces directional bias when material
-  if(d.pctChg!=null){
-    score+=clamp(d.pctChg*1.2,-10,10);
+  // Component D (10 pts): Pct change reinforcement
+  // V7.1: prefer intraday %Chg (price vs today's open) when available — this rewards
+  // genuine intraday momentum and avoids over-weighting stale pre-market gaps.
+  // Falls back to overall %Chg when intraday isn't yet computed (e.g., first few polls).
+  const pctForScore=(d.intradayPctChg!=null)?d.intradayPctChg:d.pctChg;
+  if(pctForScore!=null){
+    score+=clamp(pctForScore*1.5,-10,10);
   }
 
   return clamp(score);
@@ -1180,11 +1197,11 @@ function updateBreakoutDetection(d){
 // Looks at score velocity and duration to tag tickers as THRUST / DRIFT / REVERSAL
 function updateMomentumType(d,ticker){
   const hist=state.scoreHistory.get(ticker)||[];
-  if(hist.length<6){d.momentumType=null;d.scoreVelocity=0;return}
+  if(hist.length<6){d.scoreVelocity=0;return} // V7.1: don't null momentumType — preserve any prior classification
   const now=Date.now();
   // velocity: score change over last 2 min
   const recent=hist.filter(p=>p.t>now-2*60000);
-  if(recent.length<2){d.momentumType=null;d.scoreVelocity=0;return}
+  if(recent.length<2){d.scoreVelocity=0;return}
   const velScore=recent[recent.length-1].s-recent[0].s;
   const velMin=(recent[recent.length-1].t-recent[0].t)/60000;
   d.scoreVelocity=velMin>0?velScore/velMin:0; // points per minute
@@ -1192,14 +1209,21 @@ function updateMomentumType(d,ticker){
   const longer=hist;
   const longerSpanMin=(longer[longer.length-1].t-longer[0].t)/60000;
   const totalGain=longer[longer.length-1].s-longer[0].s;
-  // Classification
-  if(d.currentState!=='bull'&&d.currentState!=='bear'){d.momentumType=null;return}
+  // V7.1: Only ASSIGN a new type when the ticker is currently a candidate.
+  // When not a candidate, KEEP whatever type was last assigned (so end-of-session
+  // reports remember what the ticker WAS during its candidacy).
+  if(d.currentState!=='bull'&&d.currentState!=='bear')return;
   // THRUST: high velocity in a short window, score jumped fast
   if(Math.abs(d.scoreVelocity)>=8&&Math.abs(totalGain)>=12){d.momentumType='thrust';return}
   // REVERSAL: current state opposite to peak in recent past, or flipCount > 0
   if(d.flipCount>=2){d.momentumType='reversal';return}
   // DRIFT: steady climb over longer window
   if(longerSpanMin>=3&&Math.abs(totalGain)>=6&&Math.abs(d.scoreVelocity)<8){d.momentumType='drift';return}
+  // V7.1: For sustained-trend tickers (steady score, low velocity, no flips),
+  // classify as DRIFT if they've been in candidate state for at least 2 min.
+  // This catches the INTC case: a ticker with high score that never wavers.
+  const candidateAge=d.streakStart?(Date.now()-d.streakStart)/1000:0;
+  if(candidateAge>=120&&Math.abs(d.scoreVelocity)<8){d.momentumType='drift';return}
   // default
   d.momentumType='drift';
 }
@@ -1279,7 +1303,22 @@ function connectSchwab(){const k=qs('schwabKey').value.trim(),cb=qs('schwabCallb
 async function handleSchwabCallback(){const p=new URLSearchParams(location.search),code=p.get('code');if(!code)return;const k=lsGet(LS_KEYS.schwabKey,''),s=lsGet(LS_KEYS.schwabSecret,''),cb=lsGet(LS_KEYS.schwabCallback,'');if(!k||!s){toast('Missing Schwab creds','err');return}try{const r=await fetch('https://api.schwabapi.com/v1/oauth/token',{method:'POST',headers:{'Authorization':'Basic '+btoa(k+':'+s),'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(cb)}`});if(!r.ok)throw new Error('Token HTTP '+r.status);const t=await r.json();lsSet(LS_KEYS.schwabToken,t);state.schwabAccessToken=t.access_token;history.replaceState({},document.title,cb);toast('Schwab connected','ok');updateFeedPill()}catch(e){toast('Schwab OAuth failed: '+e.message,'err')}}
 
 // ---- POLL LOOP ----
-async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateVWAP(d);updateTickBuffer(d);updateBidAskHistory(d);updateDirection(d,t);updateBreakoutDetection(d);updateLayers(d);recordScorePoint(d,t);recordHistory(d);updateMomentumType(d,t);updateStabilityV7(d)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
+async function pollOnce(){if(state.paused)return;const tickers=Array.from(state.active.keys());if(!tickers.length)return;const feed=qs('feedSelect').value;try{const chunks=[];for(let i=0;i<tickers.length;i+=40)chunks.push(tickers.slice(i,i+40));let all=[];for(const c of chunks){const d=feed==='tradier'?await fetchTradierQuotes(c):await fetchSchwabQuotes(c);all=all.concat(d)}const now=Date.now();all.forEach(q=>{const t=q.symbol,d=state.active.get(t);if(!d)return;d.last=q.last;d.bid=q.bid;d.ask=q.ask;d.volume=q.volume;d.avgVol20=q.avgVol;d.prevClose=q.prevClose;d.pctChg=(typeof q.pctChg==='number')?q.pctChg:(q.pctChg!=null?parseFloat(q.pctChg):null);
+// v7.1: Capture today's open price (from Tradier/Schwab `open` field) and persist it.
+// Once captured for today's session, locked until session boundary detection resets it.
+if(q.open!=null&&q.open>0){
+  if(d.todayOpen==null||d._todayOpenDate!==state.sessionDate){
+    d.todayOpen=q.open;
+    d._todayOpenDate=state.sessionDate;
+  }
+}
+// v7.1: Compute intraday %Chg = (last - todayOpen) / todayOpen * 100
+if(d.last!=null&&d.todayOpen!=null&&d.todayOpen>0){
+  d.intradayPctChg=((d.last-d.todayOpen)/d.todayOpen)*100;
+} else {
+  d.intradayPctChg=null;
+}
+d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateVWAP(d);updateTickBuffer(d);updateBidAskHistory(d);updateDirection(d,t);updateBreakoutDetection(d);updateLayers(d);recordScorePoint(d,t);recordHistory(d);updateMomentumType(d,t);updateStabilityV7(d)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
 
 // ---- HISTORY ----
 function recordHistory(d){const h=state.history[d.ticker]||{ticker:d.ticker,firstSeen:d.firstSeen,lastSeen:d.lastSeen,obsCount:0,peak:d.smoothScore,low:d.smoothScore,last:d.smoothScore,priceLast:d.last};h.lastSeen=d.lastSeen;h.obsCount++;h.peak=Math.max(h.peak,d.smoothScore);h.low=Math.min(h.low,d.smoothScore);h.last=d.smoothScore;h.priceLast=d.last;state.history[d.ticker]=h;if(h.obsCount%5===0)lsSet(LS_KEYS.history,state.history)}
@@ -1489,7 +1528,7 @@ ${regimeRows?`<table><thead><tr><th>Regime</th><th>Transitions</th></tr></thead>
 // ---- CSV ----
 function csvE(v){if(v==null)return'';const s=String(v);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
 function dlCSV(name,rows){const csv=rows.map(r=>r.map(csvE).join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function exportActiveCSV(){const rows=[['Ticker','Last','PctChg','Volume','RelVol','Bid','Ask','OptBid','OptAsk','OptSpreadPct','OptOI','OptDTE','RawScore','SmoothScore','FirstSeenScore','DeltaScore','Arrow','CurrentState','StreakSec','FlipCount','FirstSeen','LastSeen','MinutesSeen']],now=Date.now();state.active.forEach(d=>{const streakSec=d.streakStart?Math.floor((now-d.streakStart)/1000):0;rows.push([d.ticker,d.last,d.pctChg,d.volume,d.relVol,d.bid,d.ask,d.optBid,d.optAsk,d.optSpreadPct?.toFixed(2),d.optOI,d.optDTE,d.rawScore?.toFixed(2),d.smoothScore?.toFixed(2),d.firstSeenScore?.toFixed(2),(d.rawScore-(d.firstSeenScore??d.rawScore)).toFixed(2),d.arrow,d.currentState,streakSec,d.flipCount,new Date(d.firstSeen).toISOString(),d.lastSeen?new Date(d.lastSeen).toISOString():'',((now-d.firstSeen)/6e4).toFixed(1)])});dlCSV('momscanner_active_'+Date.now()+'.csv',rows)}
+function exportActiveCSV(){const rows=[['Ticker','Last','PctChg','IntradayPctChg','TodayOpen','Volume','RelVol','Bid','Ask','OptBid','OptAsk','OptSpreadPct','OptOI','OptDTE','TrendScore','BreakoutScore','PressureScore','VWAP','MomentumType','Arrow','CurrentState','TrendState','BreakoutState','PressureState','StreakSec','FlipCount','FirstSeen','LastSeen','MinutesSeen']],now=Date.now();state.active.forEach(d=>{const streakSec=d.streakStart?Math.floor((now-d.streakStart)/1000):0;const ls=d.layerStability||{};rows.push([d.ticker,d.last,d.pctChg,d.intradayPctChg?.toFixed(2),d.todayOpen?.toFixed(2),d.volume,d.relVol,d.bid,d.ask,d.optBid,d.optAsk,d.optSpreadPct?.toFixed(2),d.optOI,d.optDTE,d.trendScore?.toFixed(2),d.breakoutScoreSm?.toFixed(2),d.pressureScore?.toFixed(2),d.vwapState?.vwap?.toFixed(2),d.momentumType||'',d.arrow,d.currentState,ls.trend?.currentState||'',ls.breakout?.currentState||'',ls.pressure?.currentState||'',streakSec,d.flipCount,new Date(d.firstSeen).toISOString(),d.lastSeen?new Date(d.lastSeen).toISOString():'',((now-d.firstSeen)/6e4).toFixed(1)])});dlCSV('momscanner_active_'+Date.now()+'.csv',rows)}
 function exportHistoryCSV(){const rows=[['Ticker','FirstSeen','LastSeen','ObsCount','PeakScore','LowScore','LastScore','PriceLast']];Object.values(state.history).forEach(h=>{rows.push([h.ticker,new Date(h.firstSeen).toISOString(),h.lastSeen?new Date(h.lastSeen).toISOString():'',h.obsCount,h.peak?.toFixed(2),h.low?.toFixed(2),h.last?.toFixed(2),h.priceLast])});dlCSV('momscanner_history_'+Date.now()+'.csv',rows)}
 
 // ---- CANDIDATE CLASSIFICATION (v4 two-stage) ----
@@ -1862,6 +1901,45 @@ function renderRow(d){
   if(d._accel)dotCls='act';
   const dotStyle=d._accel?`style="background:var(--accent);box-shadow:0 0 6px var(--accent)"`:'';
 
+  // V7.1: Intraday %Chg (price vs today's open)
+  let intraHTML='<span class="c-faint">—</span>';
+  let intraCls='c-dim';
+  const intra=d.intradayPctChg;
+  if(intra!=null){
+    intraCls=intra>0.05?'c-up':intra<-0.05?'c-down':'c-dim';
+    intraHTML=`<span title="Open: $${d.todayOpen?.toFixed(2)} → Now: $${d.last?.toFixed(2)} (${intra>=0?'+':''}${intra.toFixed(2)}% intraday) · ${d.pctChg>=0?'+':''}${d.pctChg?.toFixed(2)}% vs prev close">${intra>=0?'+':''}${intra.toFixed(2)}%</span>`;
+  }
+
+  // V7.1: Gap-relationship icon
+  // Compares overall %Chg (gap+intraday) with intraday %Chg (open→now) to characterize the relationship
+  let gapIconHTML='<span class="c-faint">—</span>';
+  if(d.pctChg!=null&&intra!=null){
+    const overallSign=Math.sign(d.pctChg);
+    const intraSign=Math.sign(intra);
+    // tolerance: ignore tiny moves <0.1%
+    const overallMaterial=Math.abs(d.pctChg)>=0.1;
+    const intraMaterial=Math.abs(intra)>=0.1;
+    if(!overallMaterial&&!intraMaterial){
+      gapIconHTML=`<span class="gap-icon gap-flat" title="Both flat">━━</span>`;
+    } else if(overallSign>0&&intraSign>0){
+      gapIconHTML=`<span class="gap-icon gap-strong-up" title="Gapped UP and continuing UP intraday — clean uptrend">↗↗</span>`;
+    } else if(overallSign<0&&intraSign<0){
+      gapIconHTML=`<span class="gap-icon gap-strong-dn" title="Gapped DOWN and continuing DOWN intraday — clean downtrend">↘↘</span>`;
+    } else if(overallSign>0&&intraSign<0){
+      gapIconHTML=`<span class="gap-icon gap-fade" title="Gapped UP but FADING intraday — gap fill underway, possibly bearish">↗↘</span>`;
+    } else if(overallSign<0&&intraSign>0){
+      gapIconHTML=`<span class="gap-icon gap-bounce" title="Gapped DOWN but BOUNCING intraday — gap fill underway, possibly bullish">↘↗</span>`;
+    } else if(overallSign>0&&!intraMaterial){
+      gapIconHTML=`<span class="gap-icon gap-stale" title="Gap UP, intraday flat — stale gap, momentum exhausted">↗━</span>`;
+    } else if(overallSign<0&&!intraMaterial){
+      gapIconHTML=`<span class="gap-icon gap-stale" title="Gap DOWN, intraday flat — stale gap, sellers exhausted">↘━</span>`;
+    } else if(intraSign>0&&!overallMaterial){
+      gapIconHTML=`<span class="gap-icon gap-strong-up" title="No gap, but rallying intraday — fresh real-time strength">━↗</span>`;
+    } else if(intraSign<0&&!overallMaterial){
+      gapIconHTML=`<span class="gap-icon gap-strong-dn" title="No gap, but falling intraday — fresh real-time weakness">━↘</span>`;
+    }
+  }
+
   // Spread pill
   let spreadHTML='<span class="c-faint">—</span>';
   if(d.optSpreadPct!=null){const sp=d.optSpreadPct;const c=sp<=5?'sp-g':sp<=15?'sp-w':'sp-b';spreadHTML=`<span class="spill ${c}" title="ATM ${d.optDTE}DTE · ${d.optBid?.toFixed(2)}/${d.optAsk?.toFixed(2)}">${sp.toFixed(1)}%</span>`}
@@ -1910,7 +1988,7 @@ function renderRow(d){
   const flipHTML=`<span class="${flipCls}" title="Total layer transitions today">${d.flipCount}</span>`;
   const chopWarn=d.flipCount>=flipWarn?`<span class="warn-chop" title="High flip count — indecisive ticker">!</span>`:'';
 
-  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}" ${dotStyle}></span></div><div class="tkr">${d.ticker}${chopWarn}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div>${trendCell}${breakoutCell}${pressureCell}<div class="r">${vwapHTML}</div><div class="c">${dirCell}</div><div class="r">${streakHTML}</div><div class="c">${typeHTML}</div><div class="r">${flipHTML}</div><div class="r c-faint">${minSeen}</div></div>`
+  return`<div class="g-row ${rowCls}"><div><span class="${dotCls}" ${dotStyle}></span></div><div class="tkr">${d.ticker}${chopWarn}</div><div class="r">${fmtN(d.last)}</div><div class="r ${pctCls}">${fmtP(d.pctChg)}</div><div class="r ${intraCls}">${intraHTML}</div><div class="c">${gapIconHTML}</div><div class="r">${spreadHTML}</div><div class="r ${rvolCls}">${rvolHTML}</div>${trendCell}${breakoutCell}${pressureCell}<div class="r">${vwapHTML}</div><div class="c">${dirCell}</div><div class="r">${streakHTML}</div><div class="c">${typeHTML}</div><div class="r">${flipHTML}</div><div class="r c-faint">${minSeen}</div></div>`
 }
 
 // Render a single layer score cell with bar and color matching the layer accent
