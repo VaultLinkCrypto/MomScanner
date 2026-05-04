@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MomScanner v8</title>
+<title>MomScanner v8.02</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -335,7 +335,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="hdr-left">
     <div class="hdr-mark"></div>
     <span class="hdr-name">MomScanner</span>
-    <span class="hdr-sub">MOMENTUM TERMINAL v8</span>
+    <span class="hdr-sub">MOMENTUM TERMINAL v8.02</span>
   </div>
   <div class="hdr-right">
     <div class="pill"><span id="feedDot" class="dot-warn"></span> <strong id="feedLabel">—</strong></div>
@@ -361,7 +361,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="info-box" id="infoBox">
   <div class="info-head" onclick="qs('infoBox').classList.toggle('open')">&#x25B8; How it works &middot; Three-layer scoring &middot; Trading signals</div>
   <div class="info-body">
-    <p><strong>v8 New: ThinkorSwim links</strong> — every ticker symbol in every table is now clickable. Click NOK in the scanner and Thinkorswim opens in a new browser tab pre-loaded with NOK. MomScanner stays running on its original tab, so session data and CSV logging are never interrupted.</p>
+    <p><strong>v8.02 New: Silent-save to a chosen folder</strong> — click <strong>📁 Choose OHLC Folder</strong> once at the start of your session, navigate to (for example) <code>My Documents/MomScanner_Claude</code>, and click "Select Folder". From then on, both the manual <strong>Export OHLC ⏱</strong> button and the hourly auto-export write CSVs directly into that folder with no save dialog and no popup. You can be away from the computer or in a meeting when the hourly export fires — the file just appears. The folder choice resets when you reload the page (browser security requirement); pick it again at the start of each trading day. Status indicator in the foot bar shows whether silent-save is active or files are going to the default Downloads folder.</p>
+    <p style="margin-top:6px"><strong>v8.01 New: Per-Minute OHLC Logger</strong> — every ticker on your scan is now logged once per minute with full OHLC plus 22 derived columns (VWAP, %Chg, IntradayPctChg, Bid/Ask, SpreadPct, RelVol, PriceVelocity, the three layer scores and states, MomentumType, Regime, TickCount, etc.). Click <strong>Export OHLC ⏱</strong> to download the full session as a CSV with no tags or annotations — pure data for backtesting. An hourly automatic backup also triggers a save every 60 minutes as crash insurance. Zero new network traffic; the logger samples the existing 5-second polls.</p>
+    <p style="margin-top:6px"><strong>v8 New: ThinkorSwim links</strong> — every ticker symbol in every table is now clickable. Click NOK in the scanner and Thinkorswim opens in a new browser tab pre-loaded with NOK. MomScanner stays running on its original tab, so session data and CSV logging are never interrupted.</p>
     <p style="margin-top:6px"><strong>v8 New: Velocity column (Vel)</strong> — shows price velocity in cents per minute over the last 60 seconds. Green if velocity is above the configured gate, red if below the negative gate, gray if flat. Used as a 4th promotion gate: a ticker with high score but stalled price (velocity ≈ 0) is blocked from promotion to prevent late entries on dead moves. Adjust the velocity gate in Settings → Layer Thresholds &amp; Timing.</p>
     <p style="margin-top:6px"><strong>v8 New: Per-Layer Threshold sliders</strong> — the old Score Weight sliders (orphaned in v7+) are replaced with real per-layer threshold and timing controls. You can now directly tune Trend/Breakout/Pressure score thresholds, minimum streaks, qualifying cycles, and the velocity gate. Lower threshold = more candidates, more noise. Lower min-streak = faster promotion, more flips.</p>
     <p style="margin-top:6px"><strong>v8 New: Improved Regime Detector</strong> — adds two dimensions beyond SPY-only volume: (a) ticker-level flip count (catches stock-specific chop even when SPY is calm), (b) "stock-specific" classification when SPY is flat but individual tickers are moving 3%+ intraday (the May 1 INTC scenario). New possible regimes: low-vol, stock-specific, choppy, trending-bull, trending-bear, mixed.</p>
@@ -452,11 +454,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
   <div class="foot">
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn" onclick="exportActiveCSV()" style="font-size:10px;padding:3px 8px">Export CSV</button>
+      <button class="btn primary" onclick="exportOHLCMinuteCSV()" title="Export per-minute OHLC log with all derived signals" style="font-size:10px;padding:3px 8px">Export OHLC ⏱</button>
+      <button class="btn" onclick="chooseOHLCFolder()" title="Pick a folder so auto-exports save there silently — no save dialog, no need to be at the computer" style="font-size:10px;padding:3px 8px">📁 Choose OHLC Folder</button>
       <button class="btn" onclick="generateSummary()" style="font-size:10px;padding:3px 8px">Session Summary</button>
     </div>
-    <span id="footStatus">Penny Pilot ON &middot; Spread max 15%</span>
+    <span id="footStatus">Penny Pilot ON &middot; Spread max 15% &middot; <span id="ohlcStatus" style="color:var(--text-faint)">OHLC: 0 bars</span> &middot; <span id="ohlcFolderStatus" style="color:var(--text-faint)">📁 Downloads (default)</span></span>
   </div>
 </div>
 
@@ -708,7 +712,7 @@ const LS_KEYS={tradier:'ms_tradier_key',tradierEnv:'ms_tradier_env',schwabKey:'m
 
 const PENNY_PILOT=new Set(['AAPL','MSFT','AMZN','GOOGL','GOOG','META','NVDA','TSLA','NFLX','ADBE','CRM','ORCL','CSCO','INTC','AMD','QCOM','AVGO','TXN','MU','AMAT','LRCX','KLAC','ASML','ARM','SPY','QQQ','IWM','DIA','XLF','XLE','XLK','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','SMH','SOXX','SOXL','SOXS','TQQQ','SQQQ','UVXY','VXX','SVXY','TLT','TBT','GLD','SLV','USO','UNG','EEM','EFA','FXI','EWZ','INDA','HYG','JNK','LQD','AGG','VTI','VOO','VTV','VUG','ARKK','ARKQ','ARKW','ARKG','ARKF','MAGS','IBIT','FBTC','ETHA','SPXL','SPXS','TNA','TZA','LABU','LABD','FAS','FAZ','JPM','BAC','WFC','C','GS','MS','BRK.B','V','MA','AXP','PYPL','SQ','BLK','SCHW','COF','USB','PNC','TFC','MET','PRU','AIG','AFL','ALL','TRV','CB','COIN','HOOD','SOFI','AFRM','UPST','LMND','WMT','COST','TGT','HD','LOW','NKE','SBUX','MCD','CMG','DIS','LULU','ULTA','ROST','TJX','BBY','KSS','M','GPS','DKS','DG','DLTR','FL','ANF','AEO','BURL','GE','CAT','DE','BA','LMT','RTX','NOC','GD','HON','MMM','UPS','FDX','UNP','CSX','NSC','F','GM','RIVN','LCID','NIO','XPEV','LI','FSR','NKLA','CCL','RCL','NCLH','AAL','UAL','DAL','LUV','XOM','CVX','COP','OXY','SLB','HAL','EOG','PXD','MRO','DVN','APA','HES','FANG','PSX','VLO','MPC','JNJ','PFE','MRK','LLY','ABBV','BMY','GILD','AMGN','BIIB','REGN','VRTX','MRNA','BNTX','NVAX','PLUG','FCEL','SAVA','UNH','CVS','CI','HUM','ANTM','HCA','TMO','DHR','ABT','MDT','SYK','BSX','ISRG','ZTS','HOLX','IDXX','DXCM','PODD','IQV','T','VZ','TMUS','CHTR','CMCSA','DISH','PARA','WBD','FOX','FOXA','ROKU','SPOT','SHOP','EBAY','ETSY','PINS','SNAP','UBER','LYFT','ABNB','DASH','BKNG','EXPE','TRIP','DKNG','PENN','CZR','WYNN','MGM','LVS','RBLX','EA','TTWO','ATVI','U','DDOG','NET','SNOW','CRWD','ZS','PANW','FTNT','OKTA','PLTR','TEAM','MDB','DOCU','ZM','WORK','SPLK','TWLO','ESTC','CFLT','GTLB','AMT','PLD','CCI','EQIX','DLR','O','SPG','AVB','EQR','WELL','PSA','VICI','VTR','SBAC','SO','NEE','DUK','D','AEP','EXC','SRE','XEL','PCG','ED','EIX','PEG','WEC','ES','ETR','DTE','PPL','CMS','AES','AEE','FCX','NEM','GOLD','AA','X','CLF','MT','VALE','RIO','BHP','SCCO','STLD','NUE','CF','MOS','FMC','LIN','APD','SHW','ECL','PPG','DD','DOW','LYB','CE','ALB','WRB','BABA','JD','PDD','BIDU','NTES','TCOM','TME','VIPS','BILI','IQ','TAL','EDU','YMM','DIDI','BZ','ZH','MNSO','TIGR','FUTU','DQ','JKS','CSIQ','BEKE','GME','AMC','BBBY','BB','NOK','WISH','CLOV','WKHS','TLRY','CGC','ACB','SNDL','HEXO','APHA','CRON','MARA','RIOT','CLSK','HUT','BITF','BTBT','CAN','CIFR','WULF','APLD','HIVE','GREE','SMCI','VRT','POWL','BE','FLNC','STEM','CHPT','BLNK','EVGO','WKSP','GOEV','RIDE','HYLN','QS','MVIS','LAZR','VLDR','INVZ','OUST','IBM','HPQ','HPE','DELL','STX','WDC','NTAP','ANET','ZBRA','JNPR','MRVL','ADI','NXPI','ON','SWKS','QRVO','TER','ACLS','AEHR','RMBS','SITM','WOLF','CRDO','NVTS','IOT','SPT','BOX','DBX','HUBS','NOW','WDAY','INTU','ADP','PAYX','PAYC','CDAY','PCTY','FICO','FDS','MORN','MCO','SPGI','VRSK','BR','IT','ACN','CTSH','INFY','WIT','EPAM','GLOB','EXLS','FIS','FISV','GPN','WU','DFS','SYF','ALLY','CIT','NAVI','SLM','LEND']);
 
-const state={active:new Map(),history:{},transitions:[],paused:false,countdown:0,refreshIntervalSec:5,schwabAccessToken:null,lastFeedStatus:'idle',priceHistory:new Map(),scoreHistory:new Map(),regime:'unknown',regimeConfidence:0,spyHistory:[],sessionStart:null,sessionDate:null};
+const state={active:new Map(),history:{},transitions:[],paused:false,countdown:0,refreshIntervalSec:5,schwabAccessToken:null,lastFeedStatus:'idle',priceHistory:new Map(),scoreHistory:new Map(),regime:'unknown',regimeConfidence:0,spyHistory:[],sessionStart:null,sessionDate:null,ohlcBuffer:[],ohlcFolderHandle:null,ohlcFolderName:null};
 
 function lsGet(k,d=null){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Storage error: '+e.message,'err')}}
@@ -1459,6 +1463,278 @@ function updatePriceVelocity(d){
   // Velocity in CENTS per minute (signed). 0.05 = 5¢/min
   d.priceVelocity=(priceDelta*100)/minutes;
 }
+
+// ============================================================================
+// v8.01: PER-MINUTE OHLC LOGGER
+// ============================================================================
+// Records one row per ticker per minute with OHLC + every derived signal.
+// Designed for backtesting and statistical pattern discovery, not for display.
+//
+// Architecture: in-memory append-only buffer. No DOM rendering, no localStorage
+// flush during session (would slow polling). Auto-export hourly as crash-safety
+// backup. Manual export at end of day produces full session CSV.
+//
+// Capacity math: 500 tickers × 390 minutes × ~150 bytes/row = ~30 MB raw.
+// Trivial for 16GB RAM. Zero new network traffic — uses existing 5s polls.
+// ============================================================================
+
+// Update per-minute OHLC bar for a ticker. Called every poll (5s) from pollOnce.
+// Aggregates samples within the current minute. When a new minute begins, the
+// previous minute's bar is "sealed" (snapshotted) and pushed to ohlcBuffer.
+function updateOHLCBar(d){
+  if(d.last==null||d.last<=0)return;
+  const now=Date.now();
+  // Minute key: floor of (now / 60000) — same key for all samples within one minute
+  const minuteEpoch=Math.floor(now/60000);
+  if(!d.ohlcBar||d.ohlcBar.minute!==minuteEpoch){
+    // Seal the previous bar (if any) and push to global buffer
+    if(d.ohlcBar)sealOHLCBar(d,d.ohlcBar);
+    // Start a new bar for this minute
+    d.ohlcBar={
+      minute:minuteEpoch,
+      ticker:d.ticker,
+      open:d.last,
+      high:d.last,
+      low:d.last,
+      close:d.last,
+      tickCount:1,
+      firstVolume:d.volume??null,
+      lastVolume:d.volume??null
+    };
+    return;
+  }
+  // Update running OHLC for the current minute
+  const bar=d.ohlcBar;
+  if(d.last>bar.high)bar.high=d.last;
+  if(d.last<bar.low)bar.low=d.last;
+  bar.close=d.last;
+  bar.tickCount++;
+  if(d.volume!=null)bar.lastVolume=d.volume;
+}
+
+// Snapshot a sealed bar with all derived signals at the moment of seal,
+// then append to the global ohlcBuffer. Dedupes by (ticker, minute) so that
+// a flush-on-export followed by continued polling can't create duplicate rows.
+function sealOHLCBar(d,bar){
+  const ls=d.layerStability||{};
+  const sealedAt=(bar.minute+1)*60000; // start of NEXT minute = seal moment
+  if(!state.ohlcBuffer)state.ohlcBuffer=[];
+  // Dedupe: if this exact (ticker, minute) is already the last entry from this
+  // ticker, replace it with the newer snapshot (more accurate close).
+  const lastIdx=state.ohlcBuffer.length-1;
+  if(lastIdx>=0&&state.ohlcBuffer[lastIdx].ticker===bar.ticker&&state.ohlcBuffer[lastIdx].minute===bar.minute){
+    // Replace existing row with updated snapshot
+    state.ohlcBuffer[lastIdx]=buildOHLCRow(d,bar,sealedAt);
+    return;
+  }
+  // Also scan back a few entries in case multiple tickers interleave (rare but defensive)
+  for(let i=state.ohlcBuffer.length-1;i>=Math.max(0,state.ohlcBuffer.length-1000);i--){
+    if(state.ohlcBuffer[i].ticker===bar.ticker&&state.ohlcBuffer[i].minute===bar.minute){
+      state.ohlcBuffer[i]=buildOHLCRow(d,bar,sealedAt);
+      return;
+    }
+  }
+  state.ohlcBuffer.push(buildOHLCRow(d,bar,sealedAt));
+  // Hard cap: 500 tickers × 24 hours × 60 min = 720,000 rows. Trim if exceeded.
+  if(state.ohlcBuffer.length>800000)state.ohlcBuffer.shift();
+}
+
+// Build a single OHLC log row from a sealed bar plus current ticker state.
+function buildOHLCRow(d,bar,sealedAt){
+  const ls=d.layerStability||{};
+  return{
+    timestamp:new Date(sealedAt).toISOString(),
+    ticker:bar.ticker,
+    minute:bar.minute,
+    open:bar.open,
+    high:bar.high,
+    low:bar.low,
+    close:bar.close,
+    volume:bar.lastVolume,
+    volumeDelta:(bar.firstVolume!=null&&bar.lastVolume!=null)?Math.max(0,bar.lastVolume-bar.firstVolume):null,
+    vwap:d.vwapState?.vwap??null,
+    pctChg:d.pctChg??null,
+    intradayPctChg:d.intradayPctChg??null,
+    bid:d.bid??null,
+    ask:d.ask??null,
+    spreadPct:(d.bid&&d.ask&&d.last)?(((d.ask-d.bid)/d.last)*100):null,
+    relVol:d.relVol??null,
+    priceVelocity:d.priceVelocity??null,
+    trendScore:d.trendScore??null,
+    breakoutScore:d.breakoutScoreSm??null,
+    pressureScore:d.pressureScore??null,
+    trendState:ls.trend?.currentState??'',
+    breakoutState:ls.breakout?.currentState??'',
+    pressureState:ls.pressure?.currentState??'',
+    momentumType:d.momentumType||'',
+    regime:state.regime||'unknown',
+    tickCount:bar.tickCount
+  };
+}
+
+// Updates the foot status bar with current OHLC bar count
+function updateOHLCStatus(){
+  const el=qs('ohlcStatus');if(!el)return;
+  const n=(state.ohlcBuffer||[]).length;
+  if(n===0)el.textContent='OHLC: 0 bars';
+  else el.textContent=`OHLC: ${n.toLocaleString()} bars logged`;
+}
+
+// ============================================================================
+// v8.02: FILE SYSTEM ACCESS API — silent-save to a chosen folder
+// ============================================================================
+// Once per session, the user clicks "Choose OHLC Folder" and grants permission
+// to a specific folder (e.g. My Documents/MomScanner_Claude). From then on,
+// every manual export AND every hourly auto-export writes a file directly into
+// that folder with NO save dialog, NO popup, NO need for the user to be at
+// the computer. Permission is held for the page lifetime — granted via a one-
+// time click each session (browser security requirement, not bypassable).
+// If the API isn't supported (older Chrome, Firefox, Safari) or the user
+// declines, exports fall back to the standard download mechanism.
+// ============================================================================
+
+// Detect if File System Access API is available (Chrome 86+, Edge 86+).
+function fsAccessSupported(){
+  return typeof window.showDirectoryPicker==='function';
+}
+
+// Prompt user to pick a folder; remember the handle for the session.
+async function chooseOHLCFolder(){
+  if(!fsAccessSupported()){
+    toast('Folder picker not supported in this browser. Files will save to default Downloads folder.','err',5000);
+    return;
+  }
+  try{
+    const handle=await window.showDirectoryPicker({mode:'readwrite',startIn:'documents'});
+    state.ohlcFolderHandle=handle;
+    state.ohlcFolderName=handle.name;
+    updateOHLCFolderStatus();
+    toast(`OHLC folder set: ${handle.name} — auto-exports will save here silently`,'ok',4500);
+  }catch(e){
+    if(e.name==='AbortError'){
+      // User canceled the picker — not an error
+      return;
+    }
+    toast('Could not select folder: '+e.message,'err',4000);
+  }
+}
+
+// Update the folder status pill in the foot bar.
+function updateOHLCFolderStatus(){
+  const el=qs('ohlcFolderStatus');if(!el)return;
+  if(state.ohlcFolderHandle){
+    el.textContent=`📁 ${state.ohlcFolderName} (silent save)`;
+    el.style.color='var(--up)';
+  } else {
+    el.textContent='📁 Downloads (default)';
+    el.style.color='var(--text-faint)';
+  }
+}
+
+// Write a CSV to the chosen folder if available; otherwise fall back to
+// browser download. Returns true if silent-saved, false if downloaded.
+async function writeOHLCToFolder(filename,csvText){
+  if(state.ohlcFolderHandle){
+    try{
+      // Verify we still have permission (handle may expire if browser revokes)
+      const perm=await state.ohlcFolderHandle.queryPermission({mode:'readwrite'});
+      if(perm!=='granted'){
+        const req=await state.ohlcFolderHandle.requestPermission({mode:'readwrite'});
+        if(req!=='granted'){
+          // Permission lost — fall back and tell user
+          state.ohlcFolderHandle=null;
+          updateOHLCFolderStatus();
+          toast('Folder permission revoked — saving to Downloads instead','err',4000);
+          return false;
+        }
+      }
+      const fileHandle=await state.ohlcFolderHandle.getFileHandle(filename,{create:true});
+      const writable=await fileHandle.createWritable();
+      await writable.write(csvText);
+      await writable.close();
+      return true;
+    }catch(e){
+      console.warn('Silent save failed, falling back to download:',e.message);
+      // Fall through to download
+    }
+  }
+  return false;
+}
+
+// Export the per-minute OHLC log as CSV. No tags, no clarifications, just data.
+// Build the OHLC CSV text from the current buffer. Used by both manual and
+// auto exports so the format is guaranteed identical.
+function buildOHLCCSVText(){
+  const buf=state.ohlcBuffer||[];
+  const cols=['Timestamp','Ticker','Open','High','Low','Close','Volume','VolumeDelta','VWAP','PctChg','IntradayPctChg','Bid','Ask','SpreadPct','RelVol','PriceVelocity','TrendScore','BreakoutScore','PressureScore','TrendState','BreakoutState','PressureState','MomentumType','Regime','TickCount'];
+  const rows=[cols];
+  buf.forEach(r=>{
+    rows.push([
+      r.timestamp,r.ticker,
+      r.open?.toFixed(4)??'',r.high?.toFixed(4)??'',r.low?.toFixed(4)??'',r.close?.toFixed(4)??'',
+      r.volume??'',r.volumeDelta??'',
+      r.vwap?.toFixed(4)??'',
+      r.pctChg!=null?r.pctChg.toFixed(3):'',
+      r.intradayPctChg!=null?r.intradayPctChg.toFixed(3):'',
+      r.bid??'',r.ask??'',
+      r.spreadPct!=null?r.spreadPct.toFixed(3):'',
+      r.relVol!=null?r.relVol.toFixed(3):'',
+      r.priceVelocity!=null?r.priceVelocity.toFixed(3):'',
+      r.trendScore!=null?r.trendScore.toFixed(2):'',
+      r.breakoutScore!=null?r.breakoutScore.toFixed(2):'',
+      r.pressureScore!=null?r.pressureScore.toFixed(2):'',
+      r.trendState||'',r.breakoutState||'',r.pressureState||'',
+      r.momentumType||'',r.regime||'',
+      r.tickCount??''
+    ]);
+  });
+  return rows.map(r=>r.map(csvE).join(',')).join('\n');
+}
+
+// Manual export. Tries silent-save to chosen folder first; falls back to download.
+async function exportOHLCMinuteCSV(){
+  // Flush any in-flight bars first so the last (incomplete) minute of
+  // the session is captured. Dedupe in sealOHLCBar prevents duplicate rows
+  // if the bar continues accumulating after the flush.
+  state.active.forEach(d=>{ if(d.ohlcBar)sealOHLCBar(d,d.ohlcBar); });
+  const buf=state.ohlcBuffer||[];
+  if(buf.length===0){toast('No OHLC bars logged yet — wait at least one full minute','err',3000);return}
+  const csv=buildOHLCCSVText();
+  const filename='momscanner_ohlc_minute_'+Date.now()+'.csv';
+  const silent=await writeOHLCToFolder(filename,csv);
+  if(silent){
+    toast(`Saved ${buf.length.toLocaleString()} OHLC bars to ${state.ohlcFolderName}`,'ok',3500);
+  } else {
+    // Fallback: standard browser download
+    const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast(`Exported ${buf.length.toLocaleString()} OHLC bars`,'ok',3500);
+  }
+}
+
+// Hourly auto-export safety net. Runs every 60 minutes during a session.
+// If a folder is chosen via "Choose OHLC Folder", saves silently with NO popup
+// and NO need for the user to be at the computer. Otherwise falls back to a
+// standard browser download (which Chrome saves to Downloads silently if the
+// "Ask where to save each file" setting is OFF — the default).
+async function ohlcHourlyAutoExport(){
+  // Flush in-flight bars (dedupe in sealOHLCBar prevents duplicates)
+  state.active.forEach(d=>{ if(d.ohlcBar)sealOHLCBar(d,d.ohlcBar); });
+  const buf=state.ohlcBuffer||[];
+  if(buf.length<60)return; // skip if fewer than ~1 minute × 60 tickers worth
+  try{
+    const csv=buildOHLCCSVText();
+    const filename='momscanner_ohlc_minute_AUTO_'+Date.now()+'.csv';
+    const silent=await writeOHLCToFolder(filename,csv);
+    if(silent){
+      toast(`Auto-saved OHLC log to ${state.ohlcFolderName}`,'ok',2500);
+    } else {
+      const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      toast('Auto-saved OHLC log (hourly safety backup)','ok',2500);
+    }
+  }catch(e){console.warn('OHLC auto-export failed:',e.message)}
+}
 function applySmoothing(d,raw){const b=getEffectiveBehavior(),tau=Math.max(5,b.smoothLag),dt=state.refreshIntervalSec,alpha=1-Math.exp(-dt/tau);d.smoothScore+=alpha*(raw-d.smoothScore);d.rawScore=raw;if(d.firstSeenScore===null&&d.lastSeen!==null)d.firstSeenScore=d.smoothScore}
 function updateDirection(d,ticker){const hist=state.priceHistory.get(ticker)||[],now=Date.now();if(d.last!=null)hist.push({t:now,price:d.last});const cut=now-30000;while(hist.length&&hist[0].t<cut)hist.shift();state.priceHistory.set(ticker,hist);if(hist.length<2){d.direction30s=0;d.arrow='flat';return}let sum=0,cnt=0;for(let i=1;i<hist.length;i++){sum+=Math.sign(hist[i].price-hist[i-1].price);cnt++}const avg=cnt?sum/cnt:0;d.direction30s=avg;d.arrow=avg>.15?'up':avg<-.15?'down':'flat'}
 
@@ -1670,7 +1946,7 @@ if(d.last!=null&&d.todayOpen!=null&&d.todayOpen>0){
 } else {
   d.intradayPctChg=null;
 }
-d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateVWAP(d);updateTickBuffer(d);updatePriceVelocity(d);updateBidAskHistory(d);updateDirection(d,t);updateBreakoutDetection(d);updateLayers(d);recordScorePoint(d,t);recordHistory(d);updateMomentumType(d,t);updateStabilityV7(d)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now)}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
+d.lastSeen=now;if(d.avgVol20&&d.volume)d.relVol=d.volume/d.avgVol20;if(q.high&&q.low)d.atr=Math.max(d.atr||0,q.high-q.low);if(d.ema9==null)d.ema9=d.last;else d.ema9=d.ema9*.8+d.last*.2;updateVWAP(d);updateTickBuffer(d);updatePriceVelocity(d);updateBidAskHistory(d);updateDirection(d,t);updateBreakoutDetection(d);updateLayers(d);recordScorePoint(d,t);recordHistory(d);updateMomentumType(d,t);updateStabilityV7(d);updateOHLCBar(d)});updateRegime();saveFullState();heartbeat();state.lastFeedStatus='ok';qs('lastRefreshLabel').textContent=fmtT(now);updateOHLCStatus()}catch(e){state.lastFeedStatus='err';toast('Feed: '+e.message,'err',4000)}updateFeedPill();render()}
 
 // ---- HISTORY ----
 function recordHistory(d){const h=state.history[d.ticker]||{ticker:d.ticker,firstSeen:d.firstSeen,lastSeen:d.lastSeen,obsCount:0,peak:d.smoothScore,low:d.smoothScore,last:d.smoothScore,priceLast:d.last};h.lastSeen=d.lastSeen;h.obsCount++;h.peak=Math.max(h.peak,d.smoothScore);h.low=Math.min(h.low,d.smoothScore);h.last=d.smoothScore;h.priceLast=d.last;state.history[d.ticker]=h;if(h.obsCount%5===0)lsSet(LS_KEYS.history,state.history)}
@@ -2750,11 +3026,13 @@ qs('audioFileInput').addEventListener('change',(e)=>{
 });
 qs('feedSelect').addEventListener('change',()=>{lsSet(LS_KEYS.feed,qs('feedSelect').value);updateFeedPill()});
 if(location.search.includes('code='))handleSchwabCallback();
-updateFeedPill();render();renderTransitionLog();updateRegimeBanner();
+updateFeedPill();render();renderTransitionLog();updateRegimeBanner();updateOHLCFolderStatus();
 setInterval(tickClock,1000);
 setInterval(heartbeat,15000);
 heartbeat();
 setInterval(()=>{if(state.active.size>0)saveFullState()},30000);
+// v8.01: Hourly OHLC auto-export safety net (3,600,000 ms = 1 hour)
+setInterval(ohlcHourlyAutoExport,3600000);
 lastPollAt=Date.now()-3000}
 document.addEventListener('DOMContentLoaded',init);
 </script>
