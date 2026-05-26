@@ -261,3 +261,19 @@ The per-minute OHLC CSV now includes 28 columns:
 - **State stored per-ticker:** `d._vwapExt`, `d._vwapVel`, `d._vwapAccel`, `d._vwapState`, `d._vwapExtPeak`.
 - **Session protection:** Never close MomScanner mid-session. All buffers are in-memory only.
 - **Settings persistence:** VWAP velocity settings stored in `ms_v805_settings` localStorage key alongside CA and trade management settings.
+
+### Volume Delta Fix
+
+56.9% of market-hours bars on 5/26 had VolumeDelta=0. The correlation was exact: every bar with tickCount=1 had zero volume delta (42,486 bars). The root cause: the old code set `firstVolume` and `lastVolume` from the same `d.volume` value on the same poll, producing `lastVolume - firstVolume = 0`. Now the previous bar's `lastVolume` carries forward as the new bar's `firstVolume`, so `delta = currentVolume - previousBarEndVolume`. This captures the volume that accumulated between bar seals even when only 1 tick is captured per bar.
+
+**When VolumeDelta = 0 IS valid:** Only for the very first bar of a ticker's session (no previous bar to reference) or genuinely zero-volume minutes on illiquid tickers outside market hours. During active trading of the 199 tracked tickers, zero volume delta should now be rare.
+
+### Anti-Throttle Web Worker
+
+Chrome throttles `setInterval` in background/minimized tabs from 10-second intervals to 60+ seconds. On 5/26 this caused 56.9% of the session (214 out of 376 minutes) to run at 1 poll per minute instead of 6. Every scoring system — TrendScore, VWAP, velocity, CA%, stability pipeline — was operating on 60-second-stale data during those periods.
+
+The main timer is now driven by an inline Web Worker (Blob-based, no external file needed) that posts a "tick" message every 1000ms on its own thread. Web Workers are completely immune to Chrome's tab visibility throttling. The main thread listens for these messages and runs `tickClock()` in response.
+
+**Poll Rate Pill:** A new indicator in the header bar shows actual polls per minute in real time. Green (≥4/min) means healthy. Yellow (2–3/min) means degraded. Red (≤1/min) means the tab is being throttled — bring the window to the foreground. With the Web Worker fix, you should never see red again, but the pill is there as a watchdog.
+
+**Important:** If you run MomScanner in a meeting, keep it in its own Chrome window (even if that window is partially behind another window). Chrome throttles *minimized* windows and *background tabs*, but a visible window on a second monitor or partially visible behind other windows is not throttled.

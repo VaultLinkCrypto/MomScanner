@@ -495,6 +495,7 @@ padding: 1px !important;
     <div class="pill">Refresh: <strong id="refreshLabel">10</strong>s</div>
     <div class="pill">Next: <strong id="countdownLabel">0</strong>s</div>
     <div class="pill">Last: <strong id="lastRefreshLabel">16:08:27</strong></div>
+    <div class="pill" id="pollRatePill" style="display:none" title="Polls per minute — green ≥4, yellow 2-3, red ≤1"><strong id="pollRateLabel">6/m</strong></div>
     <div class="gear-btn" onclick="toggleSettings()" title="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
     </div>
@@ -548,7 +549,7 @@ padding: 1px !important;
 <div class="info-box" id="infoBox">
   <div class="info-head" onclick="qs(&#39;infoBox&#39;).classList.toggle(&#39;open&#39;)">▸ How it works · Three-layer scoring · Trading signals</div>
   <div class="info-body">
-    <p><strong>🔧 v8.06.4 OHLC Accuracy Fix + Ticker Exclude List</strong> — <strong>OHLC Fix:</strong> On 5/26, 62.7% of OHLC bars were flat (O=H=L=C) because the polling cycle only delivered 1 tick per minute to most tickers. With 199 tickers in chunks of 40 and a 10-second refresh interval, many tickers received a single <code>d.last</code> snapshot per bar. Three improvements: (1) <strong>Bid/Ask range estimation</strong> — the true price sits between bid and ask at any moment, so bid is used as the low estimate and ask as the high estimate on every poll, even when only 1 tick is captured. (2) <strong>Feed session high/low delta tracking</strong> — Tradier/Schwab return session-high and session-low each poll. If the session-high increased since the last poll, a new intra-poll high occurred and is captured as the bar's high. Same for lows. (3) <strong>First-tick range</strong> — bid/ask are applied immediately when the bar opens, so even the first tick produces a bar with a realistic range. <strong>Ticker Exclude List:</strong> New input field below the ticker bar. Type tickers to exclude (e.g. SOXL, TQQQ, ARKK) and click Save. Excluded tickers are hidden from the candidates table and skipped during Add to Scan. The exclude list persists in localStorage across sessions. Excluded tickers still receive data in the background (no mid-session removal to protect OHLC logging) but are invisible in the UI. Also addresses the OHLC/Transition log timing gap: transitions are logged at the exact 5-second poll moment (e.g. 10:28:12), but OHLC bars only record state at the minute boundary (seal time). A promotion lasting &lt;60s can appear in the transition log but never show as <code>TrendState=bull</code> in the OHLC log — this is expected behavior, not a bug.</p>
+    <p><strong>🔧 v8.06.4 OHLC Accuracy Fix + Ticker Exclude List + Anti-Throttle Web Worker</strong> — <strong>Anti-Throttle:</strong> Chrome aggressively throttles <code>setInterval</code> in background/minimized tabs — from 10-second intervals down to 60+ seconds. On 5/26, this caused 56.9% of the session to run at 1 poll per minute instead of 6, meaning TrendScore, VWAP, velocity, CA%, and all scoring ran on 60-second-stale data whenever the tab was minimized. The main timer is now driven by an inline Web Worker (<code>Blob</code>-based, no external file) that sends tick messages every 1000ms on its own thread, completely immune to tab visibility throttling. A new <strong>poll rate pill</strong> in the header bar shows actual polls/minute: green (≥4), yellow (2–3), red (≤1). If you ever see red, the tab is being throttled — bring it to the foreground or use a dedicated Chrome window. <strong>OHLC Fix:</strong> On 5/26, 62.7% of OHLC bars were flat (O=H=L=C) because the polling cycle only delivered 1 tick per minute to most tickers. With 199 tickers in chunks of 40 and a 10-second refresh interval, many tickers received a single <code>d.last</code> snapshot per bar. Three improvements: (1) <strong>Bid/Ask range estimation</strong> — the true price sits between bid and ask at any moment, so bid is used as the low estimate and ask as the high estimate on every poll, even when only 1 tick is captured. (2) <strong>Feed session high/low delta tracking</strong> — Tradier/Schwab return session-high and session-low each poll. If the session-high increased since the last poll, a new intra-poll high occurred and is captured as the bar's high. Same for lows. (3) <strong>First-tick range</strong> — bid/ask are applied immediately when the bar opens, so even the first tick produces a bar with a realistic range. <strong>Volume Delta Fix:</strong> 56.9% of bars had VolumeDelta=0 because the previous code set both firstVolume and lastVolume from the same poll on single-tick bars. Now the previous bar's lastVolume carries forward as the new bar's firstVolume, so delta = currentVolume - previousBarEndVolume. This captures the volume that accumulated between bar seals even with 1 tick per bar. <strong>Ticker Exclude List:</strong> New input field below the ticker bar. Type tickers to exclude (e.g. SOXL, TQQQ, ARKK) and click Save. Excluded tickers are hidden from the candidates table and skipped during Add to Scan. The exclude list persists in localStorage across sessions. Excluded tickers still receive data in the background (no mid-session removal to protect OHLC logging) but are invisible in the UI. Also addresses the OHLC/Transition log timing gap: transitions are logged at the exact 5-second poll moment (e.g. 10:28:12), but OHLC bars only record state at the minute boundary (seal time). A promotion lasting &lt;60s can appear in the transition log but never show as <code>TrendState=bull</code> in the OHLC log — this is expected behavior, not a bug.</p>
     <p><strong>📈 v8.06.3 VWAP Velocity Monitor</strong> — New VWAP extension velocity tracking, backtested across 5 trading days (5/18–5/22) on 400K bars. Measures how fast price is separating from or reverting to VWAP using a 3-minute lookback on extension change. Three states shown as badges in the VWAP column: <strong>↗ EXTENDING</strong> (blue, VWAP velocity &gt; +0.03%/min, price pulling away — momentum is live), <strong>R REVERTING</strong> (green, VWAP velocity &lt; -0.03%/min but price velocity positive — the pullback buy signal, backtested at 63.3% WR and PF 2.30), <strong>! OVEREXTENDED</strong> (red, extension &gt; 1.5% — don't chase, wait for pullback, backtested at 30% WR for high-TrendScore tickers). VWAP velocity (VWAPVel) and extension (VWAPExt) are now logged in the OHLC minute export for post-session analysis. All thresholds configurable in Settings: velocity lookback, extending/reverting thresholds, overextended limit.</p>
     <p><strong>🔓 v8.06.2 Options Gate Removal</strong> — Removed <code>spreadOK</code> (spread ≤ 5%) and <code>oiOK</code> (OI ≥ 1000) as hard promotion gates from <code>rawQualifyLayer()</code> and <code>rawQualify()</code>. On 5/22, these gates blocked 196 of 199 tickers from ever promoting — including SMCI (TrendScore 85.6, +6.34%), DELL (85.5, +16.78%), HPQ (86.7, +15.26%), NVTS (81.6, +19.98%), and 23 other tickers that finished +3% or more. The root cause: ATM option spreads widen through the day due to theta decay on 0DTE contracts, eventually exceeding the 5% gate and permanently locking out the ticker regardless of momentum score. Options spread and OI are now <strong>display-only indicators</strong> — spread pills in the table show green (≤10%), yellow (≤25%), or red (>25%) so you can assess tradability at a glance before entering. The TrendScore, CA%, and stability pipeline handle signal quality; options liquidity is an execution decision, not a scoring decision.</p>
     <p><strong>📊 v8.06.1 Candle Accumulator v2 — Structural Scoring</strong> — Complete redesign of the CA scoring engine, backtested against 3 days of OHLC data (5/18–5/20, 240K+ bars). The old 7-criteria binary system (PF 0.95, 38.7% WR) is replaced with 7 structural criteria totaling 18 max points: <strong>(1) Higher Close Streak (4pts)</strong> — consecutive bars closing higher, the strongest single predictor found (streak 4 = 56% WR). <strong>(2) HH+HL Structure (4pts)</strong> — bars with higher high AND higher low or higher close — classical uptrend definition. <strong>(3) Window Net Move (3pts)</strong> — total % move across the 5-bar window, tiered at 0.02/0.10/0.20%. <strong>(4) Above VWAP (1pt)</strong> — binary confirmation. <strong>(5) Defensive Structure (2pts)</strong> — no lower lows in window (0 violations = 2pts, 1 = 1pt). <strong>(6) Close in Upper Half (2pts)</strong> — bars closing above midpoint of their range consistently. <strong>(7) Aggressive Green Candle (2pts)</strong> — any bar with body ≥ 0.15% of price, detecting institutional buy candles. New defaults: Early alert at 55% (was 78%), Confirmed at 72% (was 73%). Backtested results: PF 1.63 at 55%, PF 2.35 at 80%. Dropped criteria with zero predictive value: volume above session average (delta 0.000), VWAP cross event (delta -0.002), close in upper 25% (delta +0.006). Old streak bonus removed — superseded by the higher-close-streak criterion which measures the same signal more precisely.</p>
@@ -2350,6 +2351,8 @@ function updateOHLCBar(d){
   
   if(!d.ohlcBar||d.ohlcBar.minute!==minuteEpoch){
     // Seal the previous bar (if any) and push to global buffer
+    // v8.06.4: Carry forward lastVolume from previous bar for accurate delta
+    const prevLastVol=(d.ohlcBar&&d.ohlcBar.lastVolume!=null)?d.ohlcBar.lastVolume:null;
     if(d.ohlcBar)sealOHLCBar(d,d.ohlcBar);
     // Start a new bar for this minute
     d.ohlcBar={
@@ -2360,7 +2363,11 @@ function updateOHLCBar(d){
       low:d.last,
       close:d.last,
       tickCount:1,
-      firstVolume:d.volume??null,
+      // v8.06.4: Use previous bar's lastVolume as this bar's firstVolume.
+      // This way, delta = currentVolume - previousBarEndVolume, which captures
+      // the volume that accumulated since the last bar sealed — even if this
+      // bar only gets 1 tick. Falls back to current volume on first bar.
+      firstVolume:prevLastVol??d.volume??null,
       lastVolume:d.volume??null,
       // v8.06.4: track feed session high/low at bar start for delta detection
       _feedHighAtOpen:d._feedHigh||null,
@@ -4564,7 +4571,33 @@ function pauseResume(){state.paused=!state.paused;qs('pauseLabel').textContent=s
 
 // ---- CLOCK ----
 let lastPollAt=0,lastOptSweepAt=0;
-function tickClock(){const now=Date.now();state.refreshIntervalSec=computeRefreshInterval();qs('refreshLabel').textContent=state.refreshIntervalSec;const elapsed=Math.floor((now-lastPollAt)/1000),remaining=Math.max(0,state.refreshIntervalSec-elapsed);qs('countdownLabel').textContent=remaining;if(state.active.size>0)renderActive();if(!state.paused&&elapsed>=state.refreshIntervalSec&&state.active.size>0){lastPollAt=now;pollOnce()}if(!state.paused&&(now-lastOptSweepAt)>=3000&&state.active.size>0){const f=qs('feedSelect').value;if(f==='tradier'){lastOptSweepAt=now;optionsSweep()}}}
+// v8.06.4: Poll rate monitor — tracks actual polls/min to detect throttling
+let _pollTimestamps=[];
+function _updatePollRate(){
+  const now=Date.now();
+  _pollTimestamps.push(now);
+  // Keep last 2 minutes of timestamps
+  const cutoff=now-120000;
+  _pollTimestamps=_pollTimestamps.filter(t=>t>cutoff);
+  // Count polls in the last 60 seconds
+  const oneMinAgo=now-60000;
+  const recentCount=_pollTimestamps.filter(t=>t>oneMinAgo).length;
+  const pill=qs('pollRatePill');
+  const label=qs('pollRateLabel');
+  if(pill&&label){
+    pill.style.display='inline-flex';
+    label.textContent=recentCount+'/m';
+    if(recentCount>=4){
+      pill.style.background='rgba(0,255,100,0.15)';pill.style.color='#00ff66';
+    } else if(recentCount>=2){
+      pill.style.background='rgba(255,200,0,0.2)';pill.style.color='#ffcc00';
+    } else {
+      pill.style.background='rgba(255,60,60,0.2)';pill.style.color='#ff4444';
+      pill.title='LOW POLL RATE — tab may be throttled. Keep this tab visible or use a dedicated window.';
+    }
+  }
+}
+function tickClock(){const now=Date.now();state.refreshIntervalSec=computeRefreshInterval();qs('refreshLabel').textContent=state.refreshIntervalSec;const elapsed=Math.floor((now-lastPollAt)/1000),remaining=Math.max(0,state.refreshIntervalSec-elapsed);qs('countdownLabel').textContent=remaining;if(state.active.size>0)renderActive();if(!state.paused&&elapsed>=state.refreshIntervalSec&&state.active.size>0){lastPollAt=now;_updatePollRate();pollOnce()}if(!state.paused&&(now-lastOptSweepAt)>=3000&&state.active.size>0){const f=qs('feedSelect').value;if(f==='tradier'){lastOptSweepAt=now;optionsSweep()}}}
 
 // ---- INIT ----
 function init(){loadA11y();loadKeys();loadSettings();loadOptionsFilter();loadStability();loadTodSettings();loadLayerThresholdsUI();loadV805Settings();loadExcludeList();state.history=lsGet(LS_KEYS.history,{})||{};state.transitions=lsGet(LS_KEYS.transitions,[])||[];restoreActiveTickers();
@@ -4698,7 +4731,22 @@ qs('audioFileInput').addEventListener('change',(e)=>{
 qs('feedSelect').addEventListener('change',()=>{lsSet(LS_KEYS.feed,qs('feedSelect').value);updateFeedPill()});
 if(location.search.includes('code='))handleSchwabCallback();
 updateFeedPill();render();renderTransitionLog();updateRegimeBanner();updateOHLCStatus();
-setInterval(tickClock,1000);
+// v8.06.4: Web Worker timer — immune to Chrome background tab throttling.
+// Chrome throttles setInterval to ≥1000ms (or even ≥60000ms) in background tabs.
+// On 5/26, this caused 56.9% of bars to receive only 1 poll per minute (vs 6 expected)
+// whenever the MomScanner tab was minimized. All scoring, VWAP, velocity, and CA
+// calculations ran on 60-second-stale data during those periods.
+// 
+// Web Workers run on their own thread with their own timer, completely unaffected
+// by tab visibility. The worker sends a "tick" message every 1000ms, and the main
+// thread runs tickClock() in response.
+const _workerBlob=new Blob([`
+  let interval=1000;
+  setInterval(()=>postMessage('tick'),interval);
+  onmessage=e=>{if(e.data.interval)interval=e.data.interval};
+`],{type:'application/javascript'});
+const _tickWorker=new Worker(URL.createObjectURL(_workerBlob));
+_tickWorker.onmessage=()=>{tickClock()};
 setInterval(heartbeat,15000);
 heartbeat();
 setInterval(()=>{if(state.active.size>0)saveFullState()},30000);
